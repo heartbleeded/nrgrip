@@ -59,6 +59,7 @@ pub struct NrgMetadata {
     pub cuex_chunk: Option<NrgCuex>,
     pub daox_chunk: Option<NrgDaox>,
     pub sinf_chunk: Option<NrgSinf>,
+    pub mtyp_chunk: Option<NrgMtyp>,
 }
 
 impl NrgMetadata {
@@ -70,6 +71,7 @@ impl NrgMetadata {
             cuex_chunk: None,
             daox_chunk: None,
             sinf_chunk: None,
+            mtyp_chunk: None,
         }
     }
 }
@@ -94,6 +96,11 @@ impl fmt::Display for NrgMetadata {
                                                {}", chunk)),
         }
         match self.sinf_chunk {
+            None => {},
+            Some(ref chunk) => try!(write!(f, "\n\n\
+                                               {}", chunk)),
+        }
+        match self.mtyp_chunk {
             None => {},
             Some(ref chunk) => try!(write!(f, "\n\n\
                                                {}", chunk)),
@@ -330,6 +337,33 @@ impl fmt::Display for NrgSinf {
 }
 
 
+#[derive(Debug)]
+pub struct NrgMtyp {
+    pub size: u32,
+    pub unknown: u32,
+}
+
+impl NrgMtyp {
+    fn new() -> NrgMtyp {
+        NrgMtyp {
+            size: 0,
+            unknown: 0,
+        }
+    }
+}
+
+impl fmt::Display for NrgMtyp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Chunk ID: MTYP\n\
+                   Chunk description: Media Type (?)\n\
+                   Chunk size: {} Bytes\n\
+                   Unknown field: 0x{:04X}",
+               self.size,
+               self.unknown)
+    }
+}
+
+
 pub fn parse_nrg_metadata(img_name: String) -> Result<NrgMetadata, NrgError> {
     let mut nm = NrgMetadata::new();
 
@@ -402,8 +436,7 @@ fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<u16, NrgError>
             "CDTX" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
             "ETN2" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
             "SINF" => { nm.sinf_chunk = Some(try!(read_nrg_sinf(fd))); },
-            "MTYP" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
-            // "MTYP" => { try!(read_nrg_mytp(fd)); },
+            "MTYP" => { nm.mtyp_chunk = Some(try!(read_nrg_mtyp(fd))); },
             "DINF" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
             "TOCT" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
             "RELO" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
@@ -604,7 +637,10 @@ fn read_nrg_sinf(fd: &mut File) -> Result<NrgSinf, NrgError> {
 }
 
 
-#[cfg(dead_code)]
-fn read_nrg_mytp(fd: &mut File) -> Result<i32, NrgError> {
-    unimplemented!();
+/// Reads the Media Type (?) chunk (MTYP).
+fn read_nrg_mtyp(fd: &mut File) -> Result<NrgMtyp, NrgError> {
+    let mut chunk = NrgMtyp::new();
+    chunk.size = try!(read_u32(fd));
+    chunk.unknown = try!(read_u32(fd));
+    Ok(chunk)
 }
