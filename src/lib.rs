@@ -58,6 +58,7 @@ pub struct NrgMetadata {
     pub chunk_offset: u64,
     pub cuex_chunk: Option<NrgCuex>,
     pub daox_chunk: Option<NrgDaox>,
+    pub sinf_chunk: Option<NrgSinf>,
 }
 
 impl NrgMetadata {
@@ -68,6 +69,7 @@ impl NrgMetadata {
             chunk_offset: 0,
             cuex_chunk: None,
             daox_chunk: None,
+            sinf_chunk: None,
         }
     }
 }
@@ -87,6 +89,11 @@ impl fmt::Display for NrgMetadata {
                                                {}", chunk)),
         }
         match self.daox_chunk {
+            None => {},
+            Some(ref chunk) => try!(write!(f, "\n\n\
+                                               {}", chunk)),
+        }
+        match self.sinf_chunk {
             None => {},
             Some(ref chunk) => try!(write!(f, "\n\n\
                                                {}", chunk)),
@@ -296,6 +303,33 @@ impl fmt::Display for NrgDaoxTrack {
 }
 
 
+#[derive(Debug)]
+pub struct NrgSinf {
+    pub size: u32,
+    pub nb_tracks: u32,
+}
+
+impl NrgSinf {
+    fn new() -> NrgSinf {
+        NrgSinf {
+            size: 0,
+            nb_tracks: 0,
+        }
+    }
+}
+
+impl fmt::Display for NrgSinf {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Chunk ID: SINF\n\
+                   Chunk description: Session Information\n\
+                   Chunk size: {} Bytes\n\
+                   Number of tracks in the session: {}",
+               self.size,
+               self.nb_tracks)
+    }
+}
+
+
 pub fn parse_nrg_metadata(img_name: String) -> Result<NrgMetadata, NrgError> {
     let mut nm = NrgMetadata::new();
 
@@ -367,9 +401,8 @@ fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<u16, NrgError>
             "DAOX" => { nm.daox_chunk = Some(try!(read_nrg_daox(fd))); },
             "CDTX" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
             "ETN2" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
-            "SINF" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            "SINF" => { nm.sinf_chunk = Some(try!(read_nrg_sinf(fd))); },
             "MTYP" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
-            // "SINF" => { try!(read_nrg_sinf(fd)); },
             // "MTYP" => { try!(read_nrg_mytp(fd)); },
             "DINF" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
             "TOCT" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
@@ -562,9 +595,12 @@ fn read_nrg_daox_track(fd: &mut File) -> Result<NrgDaoxTrack, NrgError> {
 }
 
 
-#[cfg(dead_code)]
-fn read_nrg_sinf(fd: &mut File) -> Result<i32, NrgError> {
-    unimplemented!();
+/// Reads the NRG Session Information chunk (SINF).
+fn read_nrg_sinf(fd: &mut File) -> Result<NrgSinf, NrgError> {
+    let mut chunk = NrgSinf::new();
+    chunk.size = try!(read_u32(fd));
+    chunk.nb_tracks = try!(read_u32(fd));
+    Ok(chunk)
 }
 
 
