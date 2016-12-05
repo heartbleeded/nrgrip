@@ -57,6 +57,7 @@ pub struct NrgMetadata {
     pub nrg_version: u8,
     pub chunk_offset: u64,
     pub cuex_chunk: Option<NrgCuex>,
+    pub daox_chunk: Option<NrgDaox>,
 }
 
 impl NrgMetadata {
@@ -66,13 +67,14 @@ impl NrgMetadata {
             nrg_version: 0,
             chunk_offset: 0,
             cuex_chunk: None,
+            daox_chunk: None,
         }
     }
 }
 
 impl fmt::Display for NrgMetadata {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "Image size: {}\n\
+        try!(write!(f, "Image size: {} Bytes\n\
                         NRG format version: {}\n\
                         First chunk offset: {}",
                     self.file_size,
@@ -81,7 +83,12 @@ impl fmt::Display for NrgMetadata {
         ));
         match self.cuex_chunk {
             None => {},
-            Some(ref chunk) => try!(write!(f, "\n\
+            Some(ref chunk) => try!(write!(f, "\n\n\
+                                               {}", chunk)),
+        }
+        match self.daox_chunk {
+            None => {},
+            Some(ref chunk) => try!(write!(f, "\n\n\
                                                {}", chunk)),
         }
         Ok(())
@@ -108,7 +115,7 @@ impl fmt::Display for NrgCuex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "Chunk ID: CUEX\n\
                         Chunk description: Cue Sheet\n\
-                        Chunk size: {}", self.size));
+                        Chunk size: {} Bytes", self.size));
         if self.tracks.is_empty() {
             try!(write!(f, "\nNo CUEX tracks!"));
         } else {
@@ -172,6 +179,123 @@ impl fmt::Display for NrgCuexTrack {
 }
 
 
+#[derive(Debug)]
+pub struct NrgDaox {
+    pub size: u32,
+    pub size2: u32,
+    pub upc: String,
+    pub padding: u8,
+    pub toc_type: u16,
+    pub first_track: u8,
+    pub last_track: u8,
+    pub tracks: Vec<NrgDaoxTrack>,
+}
+
+impl NrgDaox {
+    fn new() -> NrgDaox {
+        NrgDaox {
+            size: 0,
+            size2: 0,
+            upc: String::new(),
+            padding: 0,
+            toc_type: 0,
+            first_track: 0,
+            last_track: 0,
+            tracks: Vec::new(),
+        }
+    }
+}
+
+impl fmt::Display for NrgDaox {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(writeln!(f, "Chunk ID: DAOX\n\
+                          Chunk description: DAO (Disc At Once) Information\n\
+                          Chunk size: {} Bytes\n\
+                          Chunk size 2: {}\n\
+                          UPC: \"{}\"",
+                      self.size,
+                      self.size2,
+                      self.upc));
+
+        if self.padding != 0 {
+            try!(writeln!(f, "Padding: {} (Warning: should be 0!)",
+                          self.padding));
+        }
+
+        try!(write!(f, "TOC type: 0x{:04X}\n\
+                        First track in the session: {}\n\
+                        Last track in the session: {}",
+                    self.toc_type,
+                    self.first_track,
+                    self.last_track));
+
+        if self.tracks.is_empty() {
+            try!(write!(f, "\nNo DAOX tracks!"));
+        } else {
+            let mut i = 1;
+            for track in &self.tracks {
+                try!(write!(f, "\n\
+                                Track {:02}:\n\
+                                {}", i, track));
+                i += 1;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+
+#[derive(Debug)]
+pub struct NrgDaoxTrack {
+    isrc: String,
+    sector_size: u16,
+    data_mode: u16,
+    unknown: u16,
+    index0: u64,
+    index1: u64,
+    track_end: u64,
+}
+
+impl NrgDaoxTrack {
+    fn new() -> NrgDaoxTrack {
+        NrgDaoxTrack {
+            isrc: String::new(),
+            sector_size: 0,
+            data_mode: 0,
+            unknown: 0,
+            index0: 0,
+            index1: 0,
+            track_end: 0,
+        }
+    }
+}
+
+impl fmt::Display for NrgDaoxTrack {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(writeln!(f, "\tISRC: \"{}\"\n\
+                          \tSector size in the image file: {} Bytes\n\
+                          \tMode of the data in the image file: 0x{:04X}",
+                      self.isrc,
+                      self.sector_size,
+                      self.data_mode));
+
+        if self.unknown != 0x0001 {
+            try!(writeln!(f, "\tUnknown field: 0x{:04X} \
+                              (Warning: should be 0x0001!)",
+                          self.unknown));
+        }
+
+        write!(f, "\tIndex0 (Pre-gap): {} Bytes\n\
+                   \tIndex1 (Start of track): {} Bytes\n\
+                   \tEnd of track + 1: {} Bytes",
+               self.index0,
+               self.index1,
+               self.track_end)
+    }
+}
+
+
 pub fn parse_nrg_metadata(img_name: String) -> Result<NrgMetadata, NrgError> {
     let mut nm = NrgMetadata::new();
 
@@ -200,7 +324,7 @@ pub fn parse_nrg_metadata(img_name: String) -> Result<NrgMetadata, NrgError> {
 
 
 /// Determines the NRG format of an open NRG image `fd` of file `file_size`.
-/// 
+///
 /// The offset is left after the main chunk ID, therefore the calling function
 /// can read the first data chunk's offset (32 bits for NRG v1 or 64 bits for
 /// NRG v2) directly without seeking.
@@ -240,8 +364,7 @@ fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<u16, NrgError>
         match chunk_id.as_ref() {
             "END!" => break,
             "CUEX" => { nm.cuex_chunk = Some(try!(read_nrg_cuex(fd))); },
-            "DAOX" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
-            //"DAOX" => { try!(read_nrg_daox(fd)); },
+            "DAOX" => { nm.daox_chunk = Some(try!(read_nrg_daox(fd))); },
             "CDTX" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
             "ETN2" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
             "SINF" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
@@ -299,7 +422,6 @@ fn read_u32(fd: &mut File) -> Result<u32, NrgError> {
 
 
 /// Reads a 16-bit unsigned integer from `fd`.
-#[cfg(dead_code)]
 fn read_u16(fd: &mut File) -> Result<u16, NrgError> {
     let mut buf = [0u8; 2];
     try!(fd.read_exact(&mut buf));
@@ -332,8 +454,8 @@ fn skip_unhandled_chunk(fd: &mut File, chunk_id: &str) -> Result<(), NrgError> {
 ///
 /// The CUEX is constituted of the following data:
 ///
-/// - 4 B: Chunk size (bytes): size to be read *after* this (should be a
-///        multiple of 8)
+/// - 4 B: Chunk size (in bytes): size to be read *after* this chunk size
+///        (should be a multiple of 8)
 ///
 /// - one or more pairs of 8-byte blocks composed of:
 ///   + 1 B: Mode (values found: 0x01 for audio; 0x21 for non
@@ -373,9 +495,70 @@ fn read_nrg_cuex_track(fd: &mut File) -> Result<NrgCuexTrack, NrgError> {
 }
 
 
-#[cfg(dead_code)]
-fn read_nrg_daox(fd: &mut File) -> Result<i32, NrgError> {
-    unimplemented!();
+/// Reads the NRG Disc-At-Once Information chunk (DAOX).
+///
+/// The DAOX is constituted of the following data:
+///
+/// - 4 B: Chunk size (in bytes)
+/// - 4 B: Chunk size again, sometimes little endian
+/// - 13 B: UPC (text) or null bytes
+/// - 1 B: Unknown (padding?), always 0
+/// - 2 B: TOC type
+/// - 1 B: First track in the session
+/// - 1 B: Last track in the session
+///
+/// Followed by one or more groups of 42-byte blocks composed of:
+/// - 12 B: ISRC (text) or null bytes
+/// - 2 B: Sector size in the image file (bytes)
+/// - 2 B: Mode of the data in the image file
+/// - 2 B: Unknown (should always be 0x0001)
+/// - 8 B: Index0 (Pre-gap) (bytes)
+/// - 8 B: Index1 (Start of track) (bytes)
+/// - 8 B: End of track + 1 (bytes)
+fn read_nrg_daox(fd: &mut File) -> Result<NrgDaox, NrgError> {
+    let mut chunk = NrgDaox::new();
+    chunk.size = try!(read_u32(fd));
+    let mut bytes_read = 0;
+
+    chunk.size2 = try!(read_u32(fd));
+    bytes_read += 4; // 32 bits
+
+    chunk.upc = try!(read_sized_string(fd, 13));
+    bytes_read += 13;
+
+    chunk.padding = try!(read_u8(fd));
+    bytes_read += 1;
+
+    chunk.toc_type = try!(read_u16(fd));
+    bytes_read += 2;
+
+    chunk.first_track = try!(read_u8(fd));
+    chunk.last_track = try!(read_u8(fd));
+    bytes_read += 2;
+
+    // Read all the 42-byte track info
+    while bytes_read < chunk.size {
+        chunk.tracks.push(try!(read_nrg_daox_track(fd)));
+        bytes_read += 42;
+    }
+
+    assert_eq!(bytes_read, chunk.size);
+
+    Ok(chunk)
+}
+
+
+/// Reads a track from the NRG DAO Information.
+fn read_nrg_daox_track(fd: &mut File) -> Result<NrgDaoxTrack, NrgError> {
+    let mut track = NrgDaoxTrack::new();
+    track.isrc = try!(read_sized_string(fd, 12));
+    track.sector_size = try!(read_u16(fd));
+    track.data_mode = try!(read_u16(fd));
+    track.unknown = try!(read_u16(fd));
+    track.index0 = try!(read_u64(fd));
+    track.index1 = try!(read_u64(fd));
+    track.track_end = try!(read_u64(fd));
+    Ok(track)
 }
 
 
