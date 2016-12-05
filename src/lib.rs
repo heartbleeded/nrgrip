@@ -212,14 +212,14 @@ fn read_nrg_version(fd: &mut File, file_size: u64) -> Result<u8, NrgError> {
 
     // In NRG v2, the main footer is on the last 12 bytes
     try!(fd.seek(SeekFrom::End(-12)));
-    let chunk_id = try!(read_nrg_chunk_id(&fd));
+    let chunk_id = try!(read_nrg_chunk_id(fd));
     if chunk_id == "NER5" {
         return Ok(2); // NRG v2
     }
 
     // In NRG v1, the main footer is on the last 8 bytes; since we just read 4
     // bytes after seeking 12 bytes before the end, the offset is right
-    let chunk_id = try!(read_nrg_chunk_id(&fd));
+    let chunk_id = try!(read_nrg_chunk_id(fd));
     if chunk_id == "NERO" {
         return Ok(1); // NRG v1
     }
@@ -231,26 +231,26 @@ fn read_nrg_version(fd: &mut File, file_size: u64) -> Result<u8, NrgError> {
 /// Reads all the available NRG chunks.
 ///
 /// Returns the number of chunks read.
-fn read_nrg_chunks(mut fd: &mut File, nm: &mut NrgMetadata) -> Result<u16, NrgError> {
+fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<u16, NrgError> {
     let mut nread = 0u16;
 
     loop {
-        let chunk_id = try!(read_nrg_chunk_id(&fd));
+        let chunk_id = try!(read_nrg_chunk_id(fd));
         nread += 1;
         match chunk_id.as_ref() {
             "END!" => break,
-            "CUEX" => { nm.cuex_chunk = Some(try!(read_nrg_cuex(&mut fd))); },
-            "DAOX" => { try!(skip_unhandled_chunk(&mut fd, &chunk_id)); },
-            //"DAOX" => { try!(read_nrg_daox(&mut fd)); },
-            "CDTX" => { try!(skip_unhandled_chunk(&mut fd, &chunk_id)); },
-            "ETN2" => { try!(skip_unhandled_chunk(&mut fd, &chunk_id)); },
-            "SINF" => { try!(skip_unhandled_chunk(&mut fd, &chunk_id)); },
-            "MTYP" => { try!(skip_unhandled_chunk(&mut fd, &chunk_id)); },
-            // "SINF" => { try!(read_nrg_sinf(&mut fd)); },
-            // "MTYP" => { try!(read_nrg_mytp(&mut fd)); },
-            "DINF" => { try!(skip_unhandled_chunk(&mut fd, &chunk_id)); },
-            "TOCT" => { try!(skip_unhandled_chunk(&mut fd, &chunk_id)); },
-            "RELO" => { try!(skip_unhandled_chunk(&mut fd, &chunk_id)); },
+            "CUEX" => { nm.cuex_chunk = Some(try!(read_nrg_cuex(fd))); },
+            "DAOX" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            //"DAOX" => { try!(read_nrg_daox(fd)); },
+            "CDTX" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            "ETN2" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            "SINF" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            "MTYP" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            // "SINF" => { try!(read_nrg_sinf(fd)); },
+            // "MTYP" => { try!(read_nrg_mytp(fd)); },
+            "DINF" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            "TOCT" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            "RELO" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
             _      => { println!("{}", chunk_id); return Err(NrgError::NrgChunkId); }, //fixme
         }
     }
@@ -319,8 +319,8 @@ fn read_u8(fd: &mut File) -> Result<u8, NrgError> {
 }
 
 
-fn skip_unhandled_chunk(mut fd: &mut File, chunk_id: &str) -> Result<(), NrgError> {
-    let chunk_size = try!(read_u32(&mut fd));
+fn skip_unhandled_chunk(fd: &mut File, chunk_id: &str) -> Result<(), NrgError> {
+    let chunk_size = try!(read_u32(fd));
     try!(fd.seek(SeekFrom::Current(chunk_size as i64)));
     // fixme: lib should'nt print!
     println!("Skipping unhandled chunk: {} ({} bytes)", chunk_id, chunk_size);
@@ -344,14 +344,14 @@ fn skip_unhandled_chunk(mut fd: &mut File, chunk_id: &str) -> Result<(), NrgErro
 ///   + 4 B: Position in sectors (signed integer value)
 ///
 /// - one last block like the ones above, for the lead-out area (optional?)
-fn read_nrg_cuex(mut fd: &mut File) -> Result<NrgCuex, NrgError> {
+fn read_nrg_cuex(fd: &mut File) -> Result<NrgCuex, NrgError> {
     let mut chunk = NrgCuex::new();
-    chunk.size = try!(read_u32(&mut fd));
+    chunk.size = try!(read_u32(fd));
     let mut bytes_read = 0;
 
     // Read all the 8-byte track info
     while bytes_read < chunk.size {
-        chunk.tracks.push(try!(read_nrg_cuex_track(&mut fd)));
+        chunk.tracks.push(try!(read_nrg_cuex_track(fd)));
         bytes_read += 8;
     }
 
@@ -362,13 +362,13 @@ fn read_nrg_cuex(mut fd: &mut File) -> Result<NrgCuex, NrgError> {
 
 
 /// Reads a track from the NRG cue sheet.
-fn read_nrg_cuex_track(mut fd: &mut File) -> Result<NrgCuexTrack, NrgError> {
+fn read_nrg_cuex_track(fd: &mut File) -> Result<NrgCuexTrack, NrgError> {
     let mut track = NrgCuexTrack::new();
-    track.mode = try!(read_u8(&mut fd));
-    track.track_number = try!(read_u8(&mut fd));
-    track.index_number = try!(read_u8(&mut fd));
-    track.padding = try!(read_u8(&mut fd));
-    track.position_sectors = try!(read_u32(&mut fd)) as i32;
+    track.mode = try!(read_u8(fd));
+    track.track_number = try!(read_u8(fd));
+    track.index_number = try!(read_u8(fd));
+    track.padding = try!(read_u8(fd));
+    track.position_sectors = try!(read_u32(fd)) as i32;
     Ok(track)
 }
 
