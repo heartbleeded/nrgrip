@@ -261,10 +261,16 @@ fn read_nrg_chunks(mut fd: &mut File, nm: &mut NrgMetadata) -> Result<u16, NrgEr
 
 /// Reads an NRG chunk ID (i.e. a 4-byte string) from `fd`.
 fn read_nrg_chunk_id(fd: &File) -> Result<String, NrgError> {
-    let mut handle = fd.take(4);
-    let mut chunk_id = String::new();
-    try!(handle.read_to_string(&mut chunk_id));
-    Ok(chunk_id)
+    read_sized_string(fd, 4)
+}
+
+
+/// Reads a String of size `size` from `fd`.
+fn read_sized_string(fd: &File, size: u64) -> Result<String, NrgError> {
+    let mut handle = fd.take(size);
+    let mut string = String::new();
+    try!(handle.read_to_string(&mut string));
+    Ok(string)
 }
 
 
