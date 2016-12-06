@@ -16,28 +16,33 @@ use self::metadata::NrgMetadata;
 use self::readers::*;
 
 
-pub fn parse_nrg_metadata(img_name: String) -> Result<NrgMetadata, NrgError> {
+/// Reads the metadata chunks from an open NRG image file `fd`.
+///
+/// `fd`'s offset can be anywhere when this function is called: it will be reset
+/// before anything is read.
+///
+/// In case of success, `fd`'s offset will be left after the "END!" string of
+/// the NRG footer. Otherwise, the offset is undefined and should be reset by
+/// the caller if any additional reading operations are to be done.
+pub fn read_nrg_metadata(fd: &mut File) -> Result<NrgMetadata, NrgError> {
     let mut nm = NrgMetadata::new();
-
-    // Open the image file
-    let mut fd = try!(File::open(img_name));
 
     // Get the file size
     nm.file_size = try!(fd.seek(SeekFrom::End(0)));
 
     // Get the NRG format from the footer
-    nm.nrg_version = try!(read_nrg_version(&mut fd, nm.file_size));
+    nm.nrg_version = try!(read_nrg_version(fd, nm.file_size));
     if nm.nrg_version != 2 {
         // We handle only NRG v2
         return Err(NrgError::NrgFormatV1);
     }
 
     // Read the first chunk offset
-    nm.chunk_offset = try!(read_u64(&mut fd));
+    nm.chunk_offset = try!(read_u64(fd));
 
     // Read all the chunks
     try!(fd.seek(SeekFrom::Start(nm.chunk_offset)));
-    try!(read_nrg_chunks(&mut fd, &mut nm));
+    try!(read_nrg_chunks(fd, &mut nm));
 
     Ok(nm)
 }

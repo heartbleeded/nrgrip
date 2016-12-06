@@ -1,4 +1,5 @@
 use std::env;
+use std::fs::File;
 use std::process;
 
 extern crate nrgrip;
@@ -27,10 +28,21 @@ fn main() {
         exit_usage(&prog_name);
     }
 
-    match nrgrip::metadata::parse_nrg_metadata(img_name) {
-        Err(err) => println!("{}", err.to_string()),
+    // Open the image file
+    let fd = File::open(&img_name);
+    if fd.is_err() {
+        println!("Can't open \"{}\": {}",
+                 img_name, fd.unwrap_err().to_string());
+        process::exit(1);
+    }
+    let mut fd = fd.unwrap();
+
+    // Read the image's metadata
+    match nrgrip::metadata::read_nrg_metadata(&mut fd) {
+        Err(err) => println!("Error reading \"{}\": {}",
+                             img_name, err.to_string()),
         Ok(metadata) => println!("\n\
                                   *** Metadata ***\n\
                                   {}", metadata),
-    };
+    }
 }
