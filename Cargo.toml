@@ -3,4 +3,8 @@ name = "nrgrip"
 version = "0.1.0"
 authors = ["Matteo Cypriani <mcy@lm7.fr>"]
 
+[[bin]]
+name = "nrgrip"
+doc = false
+
 [dependencies]

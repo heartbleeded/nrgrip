@@ -97,7 +97,7 @@ impl fmt::Display for NrgCuexTrack {
 /// - 4 B: Chunk size (in bytes): size to be read *after* this chunk size
 ///        (should be a multiple of 8)
 ///
-/// - one or more pairs of 8-byte blocks composed of:
+/// - one or more pairs of 8-byte track blocks composed of:
 ///   + 1 B: Mode (values found: 0x01 for audio; 0x21 for non
 ///          copyright-protected audio; 0x41 for data)
 ///   + 1 B: Track number (BCD coded; 0xAA for the lead-out area)
@@ -105,7 +105,8 @@ impl fmt::Display for NrgCuexTrack {
 ///   + 1 B: Unknown (padding?), always 0
 ///   + 4 B: Position in sectors (signed integer value)
 ///
-/// - one last block like the ones above, for the lead-out area (optional?)
+/// - one last track block like the ones above, for the lead-out area
+///   (optional?)
 pub fn read_nrg_cuex(fd: &mut File) -> Result<NrgCuex, NrgError> {
     let mut chunk = NrgCuex::new();
     chunk.size = try!(read_u32(fd));
@@ -123,7 +124,10 @@ pub fn read_nrg_cuex(fd: &mut File) -> Result<NrgCuex, NrgError> {
 }
 
 
-/// Reads a track from the NRG cue sheet.
+/// Reads a 8-byte track block from the NRG cue sheet.
+///
+/// See the documentation for read_nrg_cuex() for the format of the track
+/// blocks.
 fn read_nrg_cuex_track(fd: &mut File) -> Result<NrgCuexTrack, NrgError> {
     let mut track = NrgCuexTrack::new();
     track.mode = try!(read_u8(fd));

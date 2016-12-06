@@ -136,7 +136,7 @@ impl fmt::Display for NrgDaoxTrack {
 /// - 1 B: First track in the session
 /// - 1 B: Last track in the session
 ///
-/// Followed by one or more groups of 42-byte blocks composed of:
+/// Followed by one or more groups of 42-byte track blocks composed of:
 /// - 12 B: ISRC (text) or null bytes
 /// - 2 B: Sector size in the image file (bytes)
 /// - 2 B: Mode of the data in the image file
@@ -177,7 +177,10 @@ pub fn read_nrg_daox(fd: &mut File) -> Result<NrgDaox, NrgError> {
 }
 
 
-/// Reads a track from the NRG DAO Information.
+/// Reads a 42-byte track block from the NRG DAO Information.
+///
+/// See the documentation for read_nrg_daox() for the format of the track
+/// blocks.
 fn read_nrg_daox_track(fd: &mut File) -> Result<NrgDaoxTrack, NrgError> {
     let mut track = NrgDaoxTrack::new();
     track.isrc = try!(read_sized_string(fd, 12));
