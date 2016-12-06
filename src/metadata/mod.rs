@@ -5,7 +5,7 @@ use std::io::{Seek, SeekFrom};
 
 use ::error::NrgError;
 
-mod metadata;
+pub mod metadata;
 mod cuex;
 mod daox;
 mod sinf;

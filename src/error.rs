@@ -11,6 +11,7 @@ pub enum NrgError {
     NrgFormat,
     NrgFormatV1,
     NrgChunkId,
+    NoNrgCue,
 }
 
 impl fmt::Display for NrgError {
@@ -20,6 +21,7 @@ impl fmt::Display for NrgError {
             NrgError::NrgFormat => write!(f, "NRG format unknown."),
             NrgError::NrgFormatV1 => write!(f, "NRG v1 format is not handled."),
             NrgError::NrgChunkId => write!(f, "NRG chunk ID unknown."),
+            NrgError::NoNrgCue => write!(f, "NRG cue sheet chunk absent."),
         }
     }
 }
@@ -31,6 +33,7 @@ impl Error for NrgError {
             NrgError::NrgFormat => "NRG format",
             NrgError::NrgFormatV1 => "NRG format v1",
             NrgError::NrgChunkId => "NRG chunk ID",
+            NrgError::NoNrgCue => "No NRG cue",
         }
     }
 
@@ -40,6 +43,7 @@ impl Error for NrgError {
             NrgError::NrgFormat => None,
             NrgError::NrgFormatV1 => None,
             NrgError::NrgChunkId => None,
+            NrgError::NoNrgCue => None,
         }
     }
 }

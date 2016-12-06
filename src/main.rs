@@ -21,7 +21,7 @@ fn main() {
         exit_usage(&prog_name);
     }
 
-    println!("NRG image name: {}", img_name);
+    println!("NRG image name: \"{}\"", img_name);
 
     // We don't support more than one input file
     if argv.next().is_some() {
@@ -31,18 +31,25 @@ fn main() {
     // Open the image file
     let fd = File::open(&img_name);
     if fd.is_err() {
-        println!("Can't open \"{}\": {}",
+        println!("Can't open image file \"{}\": {}",
                  img_name, fd.unwrap_err().to_string());
         process::exit(1);
     }
     let mut fd = fd.unwrap();
 
-    // Read the image's metadata
-    match nrgrip::metadata::read_nrg_metadata(&mut fd) {
-        Err(err) => println!("Error reading \"{}\": {}",
-                             img_name, err.to_string()),
-        Ok(metadata) => println!("\n\
-                                  *** Metadata ***\n\
-                                  {}", metadata),
+    // Read and display the image's metadata
+    let metadata = nrgrip::metadata::read_nrg_metadata(&mut fd);
+    if metadata.is_err() {
+        println!("Error reading \"{}\": {}",
+                 img_name, metadata.unwrap_err().to_string());
+        process::exit(1);
+    }
+    let metadata = metadata.unwrap();
+    println!("\n{}", metadata);
+
+    // Read and write the cue sheet
+    if let Err(err) = nrgrip::cue_sheet::write_cue_sheet(&img_name, &metadata) {
+        println!("Error writing cue sheet: {}", err.to_string());
+        process::exit(1);
     }
 }
