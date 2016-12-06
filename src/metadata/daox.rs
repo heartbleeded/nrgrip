@@ -1,4 +1,10 @@
+//! NRG DAOX chunk data structure and associated functions.
+
 use std::fmt;
+use std::fs::File;
+
+use ::error::NrgError;
+use super::readers::*;
 
 
 #[derive(Debug)]
@@ -115,4 +121,71 @@ impl fmt::Display for NrgDaoxTrack {
                self.index1,
                self.track_end)
     }
+}
+
+
+/// Reads the NRG Disc-At-Once Information chunk (DAOX).
+///
+/// The DAOX is constituted of the following data:
+///
+/// - 4 B: Chunk size (in bytes)
+/// - 4 B: Chunk size again, sometimes little endian
+/// - 13 B: UPC (text) or null bytes
+/// - 1 B: Unknown (padding?), always 0
+/// - 2 B: TOC type
+/// - 1 B: First track in the session
+/// - 1 B: Last track in the session
+///
+/// Followed by one or more groups of 42-byte blocks composed of:
+/// - 12 B: ISRC (text) or null bytes
+/// - 2 B: Sector size in the image file (bytes)
+/// - 2 B: Mode of the data in the image file
+/// - 2 B: Unknown (should always be 0x0001)
+/// - 8 B: Index0 (Pre-gap) (bytes)
+/// - 8 B: Index1 (Start of track) (bytes)
+/// - 8 B: End of track + 1 (bytes)
+pub fn read_nrg_daox(fd: &mut File) -> Result<NrgDaox, NrgError> {
+    let mut chunk = NrgDaox::new();
+    chunk.size = try!(read_u32(fd));
+    let mut bytes_read = 0;
+
+    chunk.size2 = try!(read_u32(fd));
+    bytes_read += 4; // 32 bits
+
+    chunk.upc = try!(read_sized_string(fd, 13));
+    bytes_read += 13;
+
+    chunk.padding = try!(read_u8(fd));
+    bytes_read += 1;
+
+    chunk.toc_type = try!(read_u16(fd));
+    bytes_read += 2;
+
+    chunk.first_track = try!(read_u8(fd));
+    chunk.last_track = try!(read_u8(fd));
+    bytes_read += 2;
+
+    // Read all the 42-byte track info
+    while bytes_read < chunk.size {
+        chunk.tracks.push(try!(read_nrg_daox_track(fd)));
+        bytes_read += 42;
+    }
+
+    assert_eq!(bytes_read, chunk.size);
+
+    Ok(chunk)
+}
+
+
+/// Reads a track from the NRG DAO Information.
+fn read_nrg_daox_track(fd: &mut File) -> Result<NrgDaoxTrack, NrgError> {
+    let mut track = NrgDaoxTrack::new();
+    track.isrc = try!(read_sized_string(fd, 12));
+    track.sector_size = try!(read_u16(fd));
+    track.data_mode = try!(read_u16(fd));
+    track.unknown = try!(read_u16(fd));
+    track.index0 = try!(read_u64(fd));
+    track.index1 = try!(read_u64(fd));
+    track.track_end = try!(read_u64(fd));
+    Ok(track)
 }

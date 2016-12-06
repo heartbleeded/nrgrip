@@ -1,4 +1,10 @@
+//! NRG MTYP chunk data structure and associated functions.
+
 use std::fmt;
+use std::fs::File;
+
+use ::error::NrgError;
+use super::readers::read_u32;
 
 
 #[derive(Debug)]
@@ -25,4 +31,13 @@ impl fmt::Display for NrgMtyp {
                self.size,
                self.unknown)
     }
+}
+
+
+/// Reads the Media Type (?) chunk (MTYP).
+pub fn read_nrg_mtyp(fd: &mut File) -> Result<NrgMtyp, NrgError> {
+    let mut chunk = NrgMtyp::new();
+    chunk.size = try!(read_u32(fd));
+    chunk.unknown = try!(read_u32(fd));
+    Ok(chunk)
 }

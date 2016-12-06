@@ -1,4 +1,10 @@
+//! NRG CUEX chunk data structure and associated functions.
+
 use std::fmt;
+use std::fs::File;
+
+use ::error::NrgError;
+use super::readers::*;
 
 
 #[derive(Debug)]
@@ -81,4 +87,49 @@ impl fmt::Display for NrgCuexTrack {
         write!(f, "\tPosition: {} sectors ({:.2} seconds)",
                self.position_sectors, position_seconds)
     }
+}
+
+
+/// Reads the NRG Cue Sheet chunk (CUEX) from `fd`.
+///
+/// The CUEX is constituted of the following data:
+///
+/// - 4 B: Chunk size (in bytes): size to be read *after* this chunk size
+///        (should be a multiple of 8)
+///
+/// - one or more pairs of 8-byte blocks composed of:
+///   + 1 B: Mode (values found: 0x01 for audio; 0x21 for non
+///          copyright-protected audio; 0x41 for data)
+///   + 1 B: Track number (BCD coded; 0xAA for the lead-out area)
+///   + 1 B: Index number (probably BCD coded): 0 or 1
+///   + 1 B: Unknown (padding?), always 0
+///   + 4 B: Position in sectors (signed integer value)
+///
+/// - one last block like the ones above, for the lead-out area (optional?)
+pub fn read_nrg_cuex(fd: &mut File) -> Result<NrgCuex, NrgError> {
+    let mut chunk = NrgCuex::new();
+    chunk.size = try!(read_u32(fd));
+    let mut bytes_read = 0;
+
+    // Read all the 8-byte track info
+    while bytes_read < chunk.size {
+        chunk.tracks.push(try!(read_nrg_cuex_track(fd)));
+        bytes_read += 8;
+    }
+
+    assert_eq!(bytes_read, chunk.size);
+
+    Ok(chunk)
+}
+
+
+/// Reads a track from the NRG cue sheet.
+fn read_nrg_cuex_track(fd: &mut File) -> Result<NrgCuexTrack, NrgError> {
+    let mut track = NrgCuexTrack::new();
+    track.mode = try!(read_u8(fd));
+    track.track_number = try!(read_u8(fd));
+    track.index_number = try!(read_u8(fd));
+    track.padding = try!(read_u8(fd));
+    track.position_sectors = try!(read_u32(fd)) as i32;
+    Ok(track)
 }

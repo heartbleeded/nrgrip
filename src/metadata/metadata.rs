@@ -1,9 +1,11 @@
+//! NRG metadata structure, storing the contents of all of the NRG chunks.
+
 use std::fmt;
 
-use cuex::NrgCuex;
-use daox::NrgDaox;
-use sinf::NrgSinf;
-use mtyp::NrgMtyp;
+use super::cuex::NrgCuex;
+use super::daox::NrgDaox;
+use super::sinf::NrgSinf;
+use super::mtyp::NrgMtyp;
 
 
 #[derive(Debug)]

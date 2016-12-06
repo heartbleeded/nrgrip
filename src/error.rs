@@ -1,3 +1,5 @@
+//! Error type for NRGrip.
+
 use std::error::Error;
 use std::fmt;
 use std::io;

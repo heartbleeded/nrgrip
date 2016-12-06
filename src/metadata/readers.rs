@@ -1,8 +1,10 @@
+//! Miscellaneous functions to read fixed-size data from a file.
+
 use std::fs::File;
 use std::io::Read;
 use std::mem;
 
-use error::NrgError;
+use ::error::NrgError;
 
 
 /// Reads a String of size `size` from `fd`.

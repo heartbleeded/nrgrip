@@ -27,7 +27,7 @@ fn main() {
         exit_usage(&prog_name);
     }
 
-    match nrgrip::parse_nrg_metadata(img_name) {
+    match nrgrip::metadata::parse_nrg_metadata(img_name) {
         Err(err) => println!("{}", err.to_string()),
         Ok(metadata) => println!("\n\
                                   *** Metadata ***\n\
