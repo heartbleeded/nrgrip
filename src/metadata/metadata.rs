@@ -17,6 +17,7 @@ pub struct NrgMetadata {
     pub daox_chunk: Option<NrgDaox>,
     pub sinf_chunk: Option<NrgSinf>,
     pub mtyp_chunk: Option<NrgMtyp>,
+    pub skipped_chunks: Vec<String>,
 }
 
 impl NrgMetadata {
@@ -29,6 +30,7 @@ impl NrgMetadata {
             daox_chunk: None,
             sinf_chunk: None,
             mtyp_chunk: None,
+            skipped_chunks: Vec::new(),
         }
     }
 }
@@ -61,6 +63,12 @@ impl fmt::Display for NrgMetadata {
             None => {},
             Some(ref chunk) => try!(write!(f, "\n\n\
                                                {}", chunk)),
+        }
+        if !self.skipped_chunks.is_empty() {
+            try!(write!(f, "\n\nUnhandled chunks present in this image:"));
+            for chunk_id in &self.skipped_chunks {
+                try!(write!(f, " {}", chunk_id));
+            }
         }
         Ok(())
     }

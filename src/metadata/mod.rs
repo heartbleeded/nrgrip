@@ -75,28 +75,39 @@ fn read_nrg_version(fd: &mut File, file_size: u64) -> Result<u8, NrgError> {
 /// Reads all the available NRG chunks.
 ///
 /// Returns the number of chunks read.
-fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<u16, NrgError> {
-    let mut nread = 0u16;
-
+fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<(), NrgError> {
     loop {
         let chunk_id = try!(read_nrg_chunk_id(fd));
-        nread += 1;
         match chunk_id.as_ref() {
             "END!" => break,
             "CUEX" => { nm.cuex_chunk = Some(try!(cuex::read_nrg_cuex(fd))); },
             "DAOX" => { nm.daox_chunk = Some(try!(daox::read_nrg_daox(fd))); },
-            "CDTX" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
-            "ETN2" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            "CDTX" => {
+                try!(skip_chunk(fd));
+                nm.skipped_chunks.push(chunk_id);
+            },
+            "ETN2" => {
+                try!(skip_chunk(fd));
+                nm.skipped_chunks.push(chunk_id);
+            },
             "SINF" => { nm.sinf_chunk = Some(try!(sinf::read_nrg_sinf(fd))); },
             "MTYP" => { nm.mtyp_chunk = Some(try!(mtyp::read_nrg_mtyp(fd))); },
-            "DINF" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
-            "TOCT" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
-            "RELO" => { try!(skip_unhandled_chunk(fd, &chunk_id)); },
+            "DINF" => {
+                try!(skip_chunk(fd));
+                nm.skipped_chunks.push(chunk_id);
+            },
+            "TOCT" => {
+                try!(skip_chunk(fd));
+                nm.skipped_chunks.push(chunk_id);
+            },
+            "RELO" => {
+                try!(skip_chunk(fd));
+                nm.skipped_chunks.push(chunk_id);
+            },
             _      => { println!("{}", chunk_id); return Err(NrgError::NrgChunkId); }, //fixme
         }
     }
-
-    Ok(nread)
+    Ok(())
 }
 
 
@@ -106,10 +117,9 @@ fn read_nrg_chunk_id(fd: &File) -> Result<String, NrgError> {
 }
 
 
-fn skip_unhandled_chunk(fd: &mut File, chunk_id: &str) -> Result<(), NrgError> {
+/// Skips a chunk.
+fn skip_chunk(fd: &mut File) -> Result<(), NrgError> {
     let chunk_size = try!(read_u32(fd));
     try!(fd.seek(SeekFrom::Current(chunk_size as i64)));
-    // fixme: lib should'nt print!
-    println!("Skipping unhandled chunk: {} ({} bytes)", chunk_id, chunk_size);
     Ok(())
 }
