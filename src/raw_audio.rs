@@ -41,6 +41,8 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
                              img_path: &String,
                              metadata: &NrgMetadata)
                              -> Result<(), NrgError> {
+    const BUF_SIZE: usize = 1024 * 1024 * 4; // 4 MiB
+
     // Seek to the first audio byte
     let skip_bytes = get_daox_track1_index1(metadata);
     try!(in_fd.seek(SeekFrom::Start(skip_bytes)));
@@ -51,19 +53,32 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
 
     // Read/write audio data
     let mut cur_offset = skip_bytes;
-    while cur_offset < metadata.chunk_offset {
-        let mut audio_buf = [0u8; 2352];
+    while cur_offset + BUF_SIZE as u64 <= metadata.chunk_offset {
+        let mut audio_buf = [0u8; BUF_SIZE];
 
         let mut nbytes = try!(in_fd.read(&mut audio_buf));
-        if nbytes != 2352 {
+        if nbytes != BUF_SIZE {
             return Err(NrgError::AudioReadError);
         }
         cur_offset += nbytes as u64;
 
         nbytes = try!(out_fd.write(&audio_buf));
-        if nbytes != 2352 {
+        if nbytes != BUF_SIZE {
             return Err(NrgError::AudioWriteError);
         }
+    }
+
+    // Read/write the last bytes
+    let remaining: usize = (metadata.chunk_offset - cur_offset) as usize;
+    let mut audio_buf = vec![0u8; remaining];
+    let mut nbytes = try!(in_fd.read(&mut audio_buf));
+    if nbytes != remaining {
+        return Err(NrgError::AudioReadError);
+    }
+    cur_offset += nbytes as u64;
+    nbytes = try!(out_fd.write(&audio_buf));
+    if nbytes != remaining {
+        return Err(NrgError::AudioWriteError);
     }
 
     assert_eq!(cur_offset, metadata.chunk_offset);
