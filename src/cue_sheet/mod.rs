@@ -85,8 +85,11 @@ fn write_cue_track(fd: &mut File, track: &NrgCuexTrack, index0_pos: &mut i32)
     // position (i.e., it indicates a pre-gap)
     if *index0_pos >= 0 && *index0_pos < track.position_sectors {
         try!(write_cue_index(fd, 0, *index0_pos));
-        *index0_pos = -1;
     }
+
+    // Reset index0 (even if we didn't write it, because it only applies to the
+    // current track)
+    *index0_pos = -1;
 
     // Write current index
     write_cue_index(fd, track.index_number, track.position_sectors)
