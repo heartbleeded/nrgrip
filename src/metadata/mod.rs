@@ -139,7 +139,7 @@ fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<(), NrgError> 
 
 
 /// Reads an NRG chunk ID (i.e. a 4-byte string) from `fd`.
-fn read_nrg_chunk_id(fd: &File) -> Result<String, NrgError> {
+fn read_nrg_chunk_id(fd: &mut File) -> Result<String, NrgError> {
     read_sized_string(fd, 4)
 }
 

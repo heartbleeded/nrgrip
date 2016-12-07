@@ -22,6 +22,7 @@
 
 //! Miscellaneous functions to read fixed-size data from a file.
 
+use std::ffi::CString;
 use std::fs::File;
 use std::io::Read;
 use std::mem;
@@ -29,12 +30,28 @@ use std::mem;
 use ::error::NrgError;
 
 
-/// Reads a String of size `size` from `fd`.
-pub fn read_sized_string(fd: &File, size: u64) -> Result<String, NrgError> {
-    let mut handle = fd.take(size);
-    let mut string = String::new();
-    try!(handle.read_to_string(&mut string));
-    Ok(string)
+/// Reads a String of `size` bytes from `fd`.
+///
+/// The string will be truncated at the first null byte encountered; therefore,
+/// its length may be less than `size` characters.
+pub fn read_sized_string(fd: &mut File, size: usize)
+                         -> Result<String, NrgError> {
+    // Read size bytes
+    let mut bytes = vec!(0u8; size);
+    try!(fd.read_exact(&mut bytes));
+
+    // Truncate the vector at the first null byte
+    let mut i: usize = 0;
+    for b in bytes.iter() {
+        if *b == 0 { break; }
+        i += 1;
+    }
+    bytes.truncate(i);
+
+    let cstring = CString::new(bytes)
+        .expect("This Vec wasn't supposed to contain any null byte!");
+
+    cstring.into_string().map_err(NrgError::String)
 }
 
 
