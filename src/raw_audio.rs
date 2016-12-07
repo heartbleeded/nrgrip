@@ -24,6 +24,7 @@
 
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Read, Write};
+use std::path::PathBuf;
 
 use ::error::NrgError;
 use ::metadata::metadata::NrgMetadata;
@@ -32,22 +33,23 @@ use ::metadata::metadata::NrgMetadata;
 /// Extracts the raw audio data from an NRG image.
 ///
 /// - `in_fd` is the handler to the NRG image file.
-/// - `image_name` is the name of the input NRG file.
-/// - `metadata` is the metadata extracted from `image_name` by
-///    nrgrip::metadata.
+/// - `img_path` is the name of the input NRG file.
+/// - `metadata` is the metadata extracted from `img_path` by nrgrip::metadata.
 ///
-/// The output file's name is derived from `image_name`.
+/// The output file's name is derived from `img_path`.
 pub fn extract_nrg_raw_audio(in_fd: &mut File,
-                             image_name: &String,
+                             img_path: &String,
                              metadata: &NrgMetadata)
                              -> Result<(), NrgError> {
+    // Seek to the first audio byte
     let skip_bytes = get_daox_track1_index1(metadata);
-
     try!(in_fd.seek(SeekFrom::Start(skip_bytes)));
 
-    let file_name = make_output_file_name(image_name);
-    let mut out_fd = try!(File::create(file_name));
+    // Open output file
+    let audio_name = try!(make_output_file_name(img_path));
+    let mut out_fd = try!(File::create(audio_name));
 
+    // Read/write audio data
     let mut cur_offset = skip_bytes;
     while cur_offset < metadata.chunk_offset {
         let mut audio_buf = [0u8; 2352];
@@ -85,15 +87,18 @@ fn get_daox_track1_index1(metadata: &NrgMetadata) -> u64 {
 
 /// Generates the output file's name from the NRG image's name.
 ///
-/// If `image_name`'s extension is `.nrg` (case-insensitive), the name will be
-/// the same as `image_name` with a `.raw` extension instead of `.nrg`.
-/// Otherwise, it will be `image_name.raw`.
-fn make_output_file_name(image_name: &String) -> String {
-    let mut name = image_name.clone();
-    if name.to_lowercase().ends_with(".nrg") {
-        let newlen = name.len() - 4;
-        name.truncate(newlen);
+/// The output file's name will be `img_path`'s base name stripped for its
+/// extension (if any), with a ".raw" extension.
+fn make_output_file_name(img_path: &String) -> Result<String, NrgError> {
+    let mut name = PathBuf::from(img_path);
+    name.set_extension("raw");
+    let name = PathBuf::from(name);
+    let name = try!(name.file_name().ok_or(NrgError::FileName));
+
+    // Make sure the new name and the original name are different
+    if name == img_path.as_str() {
+        return Err(NrgError::FileName);
     }
-    name.push_str(".raw");
-    name
+
+    Ok(name.to_string_lossy().into_owned())
 }

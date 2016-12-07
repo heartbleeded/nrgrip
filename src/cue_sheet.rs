@@ -23,51 +23,51 @@
 //! Module to extract the cue sheet from the NRG metadata.
 
 use std::io::Write;
+use std::ffi::OsStr;
 use std::fs::File;
+use std::path::PathBuf;
 
 use ::error::NrgError;
 use ::metadata::metadata::NrgMetadata;
 use ::metadata::cuex::NrgCuexTrack;
 
 
-/// Writes the cue sheet for `image_name` into a file.
+/// Writes the cue sheet for `img_path` into a file.
 ///
-/// - `image_name` is the name of the input NRG file.
-/// - `metadata` is the metadata extracted from `image_name` by
-///    nrgrip::metadata.
+/// - `img_path` is the name of the input NRG file.
+/// - `metadata` is the metadata extracted from `img_path` by nrgrip::metadata.
 ///
-/// The output file's name is derived from `image_name`.
-pub fn write_cue_sheet(image_name: &String, metadata: &NrgMetadata)
+/// The output file's name will be `img_path`'s base name stripped for its
+/// extension (if any), with a ".cue" extension.
+pub fn write_cue_sheet(img_path: &String, metadata: &NrgMetadata)
                        -> Result<(), NrgError> {
-    if metadata.cuex_chunk.is_none() {
-        return Err(NrgError::NoNrgCue);
-    }
-    let cuex_tracks = &metadata.cuex_chunk.as_ref().unwrap().tracks;
+    // Make sure we have a cue sheet in the metadata
+    let cuex_tracks = match metadata.cuex_chunk {
+        None => return Err(NrgError::NoNrgCue),
+        Some(ref chunk) => &chunk.tracks,
+    };
 
-    let file_name = make_cue_sheet_name(image_name);
-    let mut fd = try!(File::create(file_name));
+    // Get the image's base name
+    let img_name = PathBuf::from(img_path);
+    let img_name = match img_name.file_name() {
+        Some(name) => name,
+        None => return Err(NrgError::FileName),
+    };
+
+    // Set the cue sheet file's name
+    let mut cue_name = PathBuf::from(img_name);
+    if cue_name.extension().unwrap_or(OsStr::new("")) == "cue" {
+        // img_path's extension was already .cue: problem!
+        return Err(NrgError::FileName);
+    }
+    cue_name.set_extension("cue");
 
     // Write cue sheet
-    try!(writeln!(fd, "FILE \"{}\" RAW", image_name));
+    let mut fd = try!(File::create(cue_name));
+    try!(writeln!(fd, "FILE \"{}\" RAW", img_name.to_string_lossy()));
     try!(write_cue_tracks(&mut fd, cuex_tracks));
 
     Ok(())
-}
-
-
-/// Generates the cue sheet's name from the NRG image's name.
-///
-/// If `image_name`'s extension is `.nrg` (case-insensitive), the cue sheet's
-/// name will be the same as `image_name` with a `.cue` extension instead of
-/// `.nrg`. Otherwise, the cue sheet's name will be `image_name.cue`.
-fn make_cue_sheet_name(image_name: &String) -> String {
-    let mut name = image_name.clone();
-    if name.to_lowercase().ends_with(".nrg") {
-        let newlen = name.len() - 4;
-        name.truncate(newlen);
-    }
-    name.push_str(".cue");
-    name
 }
 
 

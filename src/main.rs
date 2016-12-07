@@ -38,12 +38,12 @@ fn main() {
 
     let prog_name = argv.next().unwrap_or("nrgrip".to_string());
 
-    let img_name = argv.next().unwrap_or("".to_string());
-    if img_name == "" {
+    let img_path = argv.next().unwrap_or("".to_string());
+    if img_path == "" {
         exit_usage(&prog_name);
     }
 
-    println!("NRG image name: \"{}\"", img_name);
+    println!("NRG image path: \"{}\"", img_path);
 
     // We don't support more than one input file
     if argv.next().is_some() {
@@ -51,10 +51,10 @@ fn main() {
     }
 
     // Open the image file
-    let fd = File::open(&img_name);
+    let fd = File::open(&img_path);
     if fd.is_err() {
         println!("Can't open image file \"{}\": {}",
-                 img_name, fd.unwrap_err().to_string());
+                 img_path, fd.unwrap_err().to_string());
         process::exit(1);
     }
     let mut fd = fd.unwrap();
@@ -63,7 +63,7 @@ fn main() {
     let metadata = nrgrip::metadata::read_nrg_metadata(&mut fd);
     if metadata.is_err() {
         println!("Error reading \"{}\": {}",
-                 img_name, metadata.unwrap_err().to_string());
+                 img_path, metadata.unwrap_err().to_string());
         process::exit(1);
     }
     let metadata = metadata.unwrap();
@@ -71,7 +71,7 @@ fn main() {
 
     // Read and write the cue sheet
     println!("\nNow extracting cue sheet...");
-    if let Err(err) = nrgrip::cue_sheet::write_cue_sheet(&img_name, &metadata) {
+    if let Err(err) = nrgrip::cue_sheet::write_cue_sheet(&img_path, &metadata) {
         println!("Error writing cue sheet: {}", err.to_string());
         process::exit(1);
     }
@@ -79,7 +79,7 @@ fn main() {
     // Extract raw audio data
     println!("Now extracting raw audio data...");
     if let Err(err) = nrgrip::raw_audio::extract_nrg_raw_audio(
-        &mut fd, &img_name, &metadata) {
+        &mut fd, &img_path, &metadata) {
         println!("Error extracting raw audio data: {}", err.to_string());
     }
     println!("OK!");
