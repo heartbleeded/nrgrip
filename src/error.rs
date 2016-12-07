@@ -12,6 +12,8 @@ pub enum NrgError {
     NrgFormatV1,
     NrgChunkId,
     NoNrgCue,
+    AudioReadError,
+    AudioWriteError
 }
 
 impl fmt::Display for NrgError {
@@ -22,6 +24,8 @@ impl fmt::Display for NrgError {
             NrgError::NrgFormatV1 => write!(f, "NRG v1 format is not handled."),
             NrgError::NrgChunkId => write!(f, "NRG chunk ID unknown."),
             NrgError::NoNrgCue => write!(f, "NRG cue sheet chunk absent."),
+            NrgError::AudioReadError => write!(f, "Error reading raw audio."),
+            NrgError::AudioWriteError => write!(f, "Error writing raw audio."),
         }
     }
 }
@@ -34,6 +38,8 @@ impl Error for NrgError {
             NrgError::NrgFormatV1 => "NRG format v1",
             NrgError::NrgChunkId => "NRG chunk ID",
             NrgError::NoNrgCue => "No NRG cue",
+            NrgError::AudioReadError => "Audio read error",
+            NrgError::AudioWriteError => "Audio write error",
         }
     }
 
@@ -44,6 +50,8 @@ impl Error for NrgError {
             NrgError::NrgFormatV1 => None,
             NrgError::NrgChunkId => None,
             NrgError::NoNrgCue => None,
+            NrgError::AudioReadError => None,
+            NrgError::AudioWriteError => None,
         }
     }
 }

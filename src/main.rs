@@ -48,8 +48,17 @@ fn main() {
     println!("\n{}", metadata);
 
     // Read and write the cue sheet
+    println!("\nNow extracting cue sheet...");
     if let Err(err) = nrgrip::cue_sheet::write_cue_sheet(&img_name, &metadata) {
         println!("Error writing cue sheet: {}", err.to_string());
         process::exit(1);
     }
+
+    // Extract raw audio data
+    println!("Now extracting raw audio data...");
+    if let Err(err) = nrgrip::raw_audio::extract_nrg_raw_audio(
+        &mut fd, &img_name, &metadata) {
+        println!("Error extracting raw audio data: {}", err.to_string());
+    }
+    println!("OK!");
 }

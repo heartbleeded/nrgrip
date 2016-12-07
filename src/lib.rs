@@ -3,3 +3,4 @@
 pub mod error;
 pub mod metadata;
 pub mod cue_sheet;
+pub mod raw_audio;

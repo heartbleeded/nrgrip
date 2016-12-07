@@ -10,7 +10,10 @@ use ::metadata::cuex::NrgCuexTrack;
 
 /// Writes the cue sheet for `image_name` into a file.
 ///
-/// `metadata` is the metadata extracted from `image_name` by nrgrip::metadata.
+/// - `image_name` is the name of the input NRG file.
+/// - `metadata` is the metadata extracted from `image_name` by
+///    nrgrip::metadata.
+///
 /// The output file's name is derived from `image_name`.
 pub fn write_cue_sheet(image_name: &String, metadata: &NrgMetadata)
                        -> Result<(), NrgError> {
