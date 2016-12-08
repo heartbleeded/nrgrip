@@ -44,16 +44,19 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
     const BUF_SIZE: usize = 1024 * 1024 * 4; // 4 MiB
 
     // Seek to the first audio byte
-    let skip_bytes = get_daox_track1_index1(metadata);
-    try!(in_fd.seek(SeekFrom::Start(skip_bytes)));
+    let first_audio_byte = get_daox_track1_index1(metadata);
+    try!(in_fd.seek(SeekFrom::Start(first_audio_byte)));
+
+    // Get the last audio byte
+    let last_audio_byte = get_last_audio_byte(metadata);
 
     // Open output file
     let audio_name = try!(make_output_file_name(img_path));
     let mut out_fd = try!(File::create(audio_name));
 
     // Read/write audio data
-    let mut cur_offset = skip_bytes;
-    while cur_offset + BUF_SIZE as u64 <= metadata.chunk_offset {
+    let mut cur_offset = first_audio_byte;
+    while cur_offset + BUF_SIZE as u64 <= last_audio_byte {
         let mut audio_buf = [0u8; BUF_SIZE];
 
         let mut nbytes = try!(in_fd.read(&mut audio_buf));
@@ -69,7 +72,7 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
     }
 
     // Read/write the last bytes
-    let remaining: usize = (metadata.chunk_offset - cur_offset) as usize;
+    let remaining: usize = (last_audio_byte - cur_offset) as usize;
     let mut audio_buf = vec![0u8; remaining];
     let mut nbytes = try!(in_fd.read(&mut audio_buf));
     if nbytes != remaining {
@@ -81,7 +84,7 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
         return Err(NrgError::AudioWriteError);
     }
 
-    assert_eq!(cur_offset, metadata.chunk_offset);
+    assert_eq!(cur_offset, last_audio_byte);
     Ok(())
 }
 
@@ -97,6 +100,23 @@ fn get_daox_track1_index1(metadata: &NrgMetadata) -> u64 {
         return 0;
     }
     return daox_tracks[0].index1;
+}
+
+
+/// Returns the number of the byte past the last audio byte in the image.
+///
+/// This byte is indicated by the `track_end` of the last DAOX track in
+/// `metadata`, if at least one track is present in the DAOX chunk.
+/// If not, `metadata.chunk_offset` is returned.
+///
+/// Note that the two values should always be identical, but you never know.
+fn get_last_audio_byte(metadata: &NrgMetadata) -> u64 {
+    if let Some(daox_chunk) = metadata.daox_chunk.as_ref() {
+        if let Some(last_track) = daox_chunk.tracks.last() {
+            return last_track.track_end;
+        }
+    }
+    metadata.chunk_offset
 }
 
 
