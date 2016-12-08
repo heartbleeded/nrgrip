@@ -84,6 +84,21 @@ impl NrgMetadata {
         }
         self.chunk_offset
     }
+
+    /// Returns the sector size of this image.
+    ///
+    /// This information is retrieved from the first DAOX track only; it is
+    /// assumed that every track has the same sector size.
+    ///
+    /// Returns 0 if there are no DAOX tracks.
+    pub fn sector_size(&self) -> u16 {
+        if let Some(daox_chunk) = self.daox_chunk.as_ref() {
+            if let Some(first_track) = daox_chunk.tracks.first() {
+                return first_track.sector_size;
+            }
+        }
+        0
+    }
 }
 
 impl fmt::Display for NrgMetadata {

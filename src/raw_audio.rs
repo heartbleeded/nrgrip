@@ -29,6 +29,9 @@ use std::path::PathBuf;
 use ::error::NrgError;
 use ::metadata::metadata::NrgMetadata;
 
+const RAW_SEC_SIZE: u16 = 2352;
+const RAW96_SEC_SIZE: u16 = 2448;
+
 
 /// Extracts the raw audio data from an NRG image.
 ///
@@ -45,18 +48,19 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
     let first_audio_byte = metadata.first_audio_byte();
     try!(in_fd.seek(SeekFrom::Start(first_audio_byte)));
 
-    // Get the last audio byte
-    let last_audio_byte = metadata.last_audio_byte();
-
     // Open output file
     let audio_name = try!(make_output_file_name(img_path));
     let mut out_fd = try!(File::create(audio_name));
 
     // Copy the audio data
-    let count = last_audio_byte - first_audio_byte;
-    let bytes_copied = try!(copy_raw_audio(in_fd, &mut out_fd, count));
+    let count = metadata.last_audio_byte() - first_audio_byte;
+    let bytes_read = match metadata.sector_size() {
+        RAW96_SEC_SIZE => try!(copy_raw96_audio(in_fd, &mut out_fd, count)),
+        0              => return Err(NrgError::AudioReadError),
+        _              => try!(copy_raw_audio(in_fd, &mut out_fd, count)),
+    };
 
-    assert_eq!(count, bytes_copied);
+    assert_eq!(count, bytes_read);
     Ok(())
 }
 
@@ -66,12 +70,12 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
 /// The offsets of `in_fd` and `out_fd` are not reset prior to reading and
 /// writing.
 ///
-/// Returns the number of bytes copied.
+/// Returns the number of bytes read/written.
 fn copy_raw_audio(in_fd: &mut File, out_fd: &mut File, count: u64)
                   -> Result<u64, NrgError> {
     // The buffer size (~4,6 MiB) is a multiple of the standard audio CD sector
     // size, i.e. 2352 bytes (it doesn't have to be, though).
-    const BUF_SIZE: usize = 2352 * 1024 * 2;
+    const BUF_SIZE: usize = RAW_SEC_SIZE as usize * 1024 * 2;
 
     // Read/write audio data
     let mut bytes_read = 0;
@@ -101,6 +105,43 @@ fn copy_raw_audio(in_fd: &mut File, out_fd: &mut File, count: u64)
     nbytes = try!(out_fd.write(&audio_buf));
     if nbytes != remaining {
         return Err(NrgError::AudioWriteError);
+    }
+
+    Ok(bytes_read)
+}
+
+
+/// Reads `count` bytes from `in_fd` and write them to `out_fd` after stripping
+/// the sub-channel bytes.
+///
+/// `in_fd` is read by chunks of 2448 bytes, then the first 2352 bytes are
+/// written to `out_fd`, leaving out the 96 sub-channel bytes.
+///
+/// The offsets of `in_fd` and `out_fd` are not reset prior to reading and
+/// writing.
+///
+/// Returns the number of bytes read (not written).
+fn copy_raw96_audio(in_fd: &mut File, out_fd: &mut File, count: u64)
+                    -> Result<u64, NrgError> {
+    const IN_BUF_SIZE: usize = RAW96_SEC_SIZE as usize;
+    const OUT_BUF_SIZE: usize = RAW_SEC_SIZE as usize;
+
+    // Read/write audio data
+    let mut bytes_read = 0;
+    while bytes_read < count {
+        let mut audio_buf = vec![0u8; IN_BUF_SIZE];
+
+        let mut nbytes = try!(in_fd.read(&mut audio_buf));
+        if nbytes != IN_BUF_SIZE {
+            return Err(NrgError::AudioReadError);
+        }
+        bytes_read += nbytes as u64;
+
+        audio_buf.truncate(OUT_BUF_SIZE);
+        nbytes = try!(out_fd.write(&audio_buf));
+        if nbytes != OUT_BUF_SIZE {
+            return Err(NrgError::AudioWriteError);
+        }
     }
 
     Ok(bytes_read)
