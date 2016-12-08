@@ -34,6 +34,11 @@ use nrgrip::raw_audio;
 
 
 fn main() {
+    process::exit(main_main());
+}
+
+
+fn main_main() -> i32 {
     let args: Vec<String> = env::args().collect();
     let prog_name = &args.first().expect("Can't retrieve program's name");
 
@@ -55,13 +60,15 @@ fn main() {
     };
 
     if options.opt_present("help") {
-        exit_usage(&prog_name, &opts);
+        print_usage(&prog_name, &opts);
+        return 0;
     }
 
     // Get input NRG image name
     if options.free.len() != 1 {
         // We need exactly one input file!
-        fail_usage(&prog_name, &opts);
+        print_usage(&prog_name, &opts);
+        return 1;
     }
     let img_path = &options.free[0];
     println!("NRG image path: \"{}\"", img_path);
@@ -79,7 +86,7 @@ fn main() {
         Ok(fd) => fd,
         Err(err) => {
             println!("Can't open image file \"{}\": {}", img_path, err);
-            process::exit(1);
+            return 1;
         },
     };
 
@@ -88,7 +95,7 @@ fn main() {
         Ok(metadata) => metadata,
         Err(err) => {
             println!("Error reading \"{}\": {}", img_path, err);
-            process::exit(1);
+            return 1;
         },
     };
 
@@ -102,7 +109,7 @@ fn main() {
         println!("\nExtracting cue sheet...");
         if let Err(err) = cue_sheet::write_cue_sheet(&img_path, &metadata) {
             println!("Error writing cue sheet: {}", err);
-            process::exit(1);
+            return 1;
         }
         println!("OK!");
     }
@@ -116,18 +123,10 @@ fn main() {
         }
         println!("OK!");
     }
+
+    0
 }
 
-
-fn exit_usage(prog_name: &str, opts: &Options) {
-    print_usage(prog_name, opts);
-    process::exit(0);
-}
-
-fn fail_usage(prog_name: &str, opts: &Options) {
-    print_usage(prog_name, opts);
-    process::exit(1);
-}
 
 fn print_usage(prog_name: &str, opts: &Options) {
     let brief = format!("NRGrip - rip Nero Burning ROM audio images
