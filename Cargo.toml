@@ -9,3 +9,4 @@ name = "nrgrip"
 doc = false
 
 [dependencies]
+getopts = "0.2"

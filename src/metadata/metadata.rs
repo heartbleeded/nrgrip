@@ -105,7 +105,7 @@ impl fmt::Display for NrgMetadata {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "Image size: {} Bytes\n\
                         NRG format version: {}\n\
-                        First chunk offset: {}",
+                        First NRG chunk offset: {}",
                     self.file_size,
                     self.nrg_version,
                     self.chunk_offset,

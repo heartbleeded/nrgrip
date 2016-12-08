@@ -24,31 +24,52 @@ use std::env;
 use std::fs::File;
 use std::process;
 
+extern crate getopts;
+use getopts::Options;
+
 extern crate nrgrip;
 
 
-fn exit_usage(prog_name: &String) {
-    println!("Usage:\n\t{} <image.nrg>", prog_name);
-    process::exit(1);
-}
-
-
 fn main() {
-    let mut argv = env::args();
+    let args: Vec<String> = env::args().collect();
+    let prog_name = &args.first().expect("Can't retrieve program's name");
 
-    let prog_name = argv.next().unwrap_or("nrgrip".to_string());
+    let mut opts = Options::new();
+    opts.optflag("i", "info",
+                 "display the image's metadata (default action)");
+    opts.optflag("x", "extract",
+                 "same as --extract-cue --extract-raw");
+    opts.optflag("c", "extract-cue",
+                 "extract cue sheet from the NRG metadata");
+    opts.optflag("r", "extract-raw",
+                 "extract the raw audio tracks");
+    opts.optflag("h", "help",
+                 "print this help message");
 
-    let img_path = argv.next().unwrap_or("".to_string());
-    if img_path == "" {
-        exit_usage(&prog_name);
+    let options = match opts.parse(&args[1..]) {
+        Ok(m) => m,
+        Err(err) => panic!(err.to_string()),
+    };
+
+    if options.opt_present("help") {
+        exit_usage(&prog_name, &opts);
     }
 
+    // Get input NRG image name
+    if options.free.len() != 1 {
+        // We need exactly one input file!
+        fail_usage(&prog_name, &opts);
+    }
+    let img_path = &options.free[0];
     println!("NRG image path: \"{}\"", img_path);
 
-    // We don't support more than one input file
-    if argv.next().is_some() {
-        exit_usage(&prog_name);
-    }
+    // See what actions are to be taken on that file
+    let action_cue =
+        options.opt_present("extract-cue") || options.opt_present("extract");
+    let action_raw =
+        options.opt_present("extract-raw") || options.opt_present("extract");
+    let action_info =
+        options.opt_present("info") || !(action_cue || action_raw);
 
     // Open the image file
     let fd = File::open(&img_path);
@@ -59,7 +80,7 @@ fn main() {
     }
     let mut fd = fd.unwrap();
 
-    // Read and display the image's metadata
+    // Read the image's metadata
     let metadata = nrgrip::metadata::read_nrg_metadata(&mut fd);
     if metadata.is_err() {
         println!("Error reading \"{}\": {}",
@@ -67,20 +88,50 @@ fn main() {
         process::exit(1);
     }
     let metadata = metadata.unwrap();
-    println!("\n{}", metadata);
+
+    // Display metadata if requested
+    if action_info {
+        println!("\n{}", metadata);
+    }
 
     // Read and write the cue sheet
-    println!("\nNow extracting cue sheet...");
-    if let Err(err) = nrgrip::cue_sheet::write_cue_sheet(&img_path, &metadata) {
-        println!("Error writing cue sheet: {}", err.to_string());
-        process::exit(1);
+    if action_cue {
+        println!("\nExtracting cue sheet...");
+        if let Err(err) = nrgrip::cue_sheet::write_cue_sheet(&img_path,
+                                                             &metadata) {
+            println!("Error writing cue sheet: {}", err.to_string());
+            process::exit(1);
+        }
+        println!("OK!");
     }
 
     // Extract raw audio data
-    println!("Now extracting raw audio data...");
-    if let Err(err) = nrgrip::raw_audio::extract_nrg_raw_audio(
-        &mut fd, &img_path, &metadata) {
-        println!("Error extracting raw audio data: {}", err.to_string());
+    if action_raw {
+        println!("\nExtracting raw audio data...");
+        if let Err(err) = nrgrip::raw_audio::extract_nrg_raw_audio(
+            &mut fd, &img_path, &metadata) {
+            println!("Error extracting raw audio data: {}", err.to_string());
+        }
+        println!("OK!");
     }
-    println!("OK!");
+}
+
+
+fn exit_usage(prog_name: &str, opts: &Options) {
+    print_usage(prog_name, opts);
+    process::exit(0);
+}
+
+fn fail_usage(prog_name: &str, opts: &Options) {
+    print_usage(prog_name, opts);
+    process::exit(1);
+}
+
+fn print_usage(prog_name: &str, opts: &Options) {
+    let brief = format!("NRGrip - rip Nero Burning ROM audio images
+
+Usage:
+    {prog} [-icrx] [options] <image.nrg>
+    {prog} -h", prog = prog_name);
+    print!("{}", opts.usage(&brief));
 }
