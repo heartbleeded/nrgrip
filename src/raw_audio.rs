@@ -41,7 +41,7 @@ const RAW96_SEC_SIZE: u16 = 2448;
 ///
 /// The output file's name is derived from `img_path`.
 pub fn extract_nrg_raw_audio(in_fd: &mut File,
-                             img_path: &String,
+                             img_path: &str,
                              metadata: &NrgMetadata)
                              -> Result<(), NrgError> {
     // Seek to the first audio byte
@@ -152,14 +152,14 @@ fn copy_raw96_audio(in_fd: &mut File, out_fd: &mut File, count: u64)
 ///
 /// The output file's name will be `img_path`'s base name stripped for its
 /// extension (if any), with a ".raw" extension.
-fn make_output_file_name(img_path: &String) -> Result<String, NrgError> {
+fn make_output_file_name(img_path: &str) -> Result<String, NrgError> {
     let mut name = PathBuf::from(img_path);
     name.set_extension("raw");
     let name = try!(name.file_name().ok_or(
         NrgError::FileName(name.to_string_lossy().into_owned())));
 
     // Make sure the new name and the original name are different
-    if name == img_path.as_str() {
+    if name == img_path {
         return Err(NrgError::FileName("Input and output file are identical"
                                       .to_string()));
     }

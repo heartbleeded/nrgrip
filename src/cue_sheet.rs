@@ -39,7 +39,7 @@ use ::metadata::cuex::NrgCuexTrack;
 ///
 /// The output file's name will be `img_path`'s base name stripped for its
 /// extension (if any), with a ".cue" extension.
-pub fn write_cue_sheet(img_path: &String, metadata: &NrgMetadata)
+pub fn write_cue_sheet(img_path: &str, metadata: &NrgMetadata)
                        -> Result<(), NrgError> {
     // Make sure we have a cue sheet in the metadata
     let cuex_tracks = match metadata.cuex_chunk {
@@ -51,7 +51,7 @@ pub fn write_cue_sheet(img_path: &String, metadata: &NrgMetadata)
     let img_name = PathBuf::from(img_path);
     let img_name = match img_name.file_name() {
         Some(name) => name,
-        None => return Err(NrgError::FileName(img_path.clone())),
+        None => return Err(NrgError::FileName(img_path.to_string())),
     };
 
     // Set the cue sheet file's name
