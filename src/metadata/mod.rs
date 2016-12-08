@@ -112,27 +112,11 @@ fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<(), NrgError> 
         let chunk_id = try!(read_nrg_chunk_id(fd));
         match chunk_id.as_ref() {
             "END!" => break,
-            "CUEX" => { nm.cuex_chunk = Some(try!(cuex::read_nrg_cuex(fd))); },
-            "DAOX" => { nm.daox_chunk = Some(try!(daox::read_nrg_daox(fd))); },
-            "CDTX" => {
-                try!(skip_chunk(fd));
-                nm.skipped_chunks.push(chunk_id);
-            },
-            "ETN2" => {
-                try!(skip_chunk(fd));
-                nm.skipped_chunks.push(chunk_id);
-            },
-            "SINF" => { nm.sinf_chunk = Some(try!(sinf::read_nrg_sinf(fd))); },
-            "MTYP" => { nm.mtyp_chunk = Some(try!(mtyp::read_nrg_mtyp(fd))); },
-            "DINF" => {
-                try!(skip_chunk(fd));
-                nm.skipped_chunks.push(chunk_id);
-            },
-            "TOCT" => {
-                try!(skip_chunk(fd));
-                nm.skipped_chunks.push(chunk_id);
-            },
-            "RELO" => {
+            "CUEX" => nm.cuex_chunk = Some(try!(cuex::read_nrg_cuex(fd))),
+            "DAOX" => nm.daox_chunk = Some(try!(daox::read_nrg_daox(fd))),
+            "SINF" => nm.sinf_chunk = Some(try!(sinf::read_nrg_sinf(fd))),
+            "MTYP" => nm.mtyp_chunk = Some(try!(mtyp::read_nrg_mtyp(fd))),
+            "CDTX" | "ETN2" | "DINF" | "TOCT" | "RELO" => {
                 try!(skip_chunk(fd));
                 nm.skipped_chunks.push(chunk_id);
             },
