@@ -28,6 +28,9 @@ extern crate getopts;
 use getopts::Options;
 
 extern crate nrgrip;
+use nrgrip::metadata;
+use nrgrip::cue_sheet;
+use nrgrip::raw_audio;
 
 
 fn main() {
@@ -48,7 +51,7 @@ fn main() {
 
     let options = match opts.parse(&args[1..]) {
         Ok(m) => m,
-        Err(err) => panic!(err.to_string()),
+        Err(err) => panic!(err),
     };
 
     if options.opt_present("help") {
@@ -72,22 +75,22 @@ fn main() {
         options.opt_present("info") || !(action_cue || action_raw);
 
     // Open the image file
-    let fd = File::open(&img_path);
-    if fd.is_err() {
-        println!("Can't open image file \"{}\": {}",
-                 img_path, fd.unwrap_err().to_string());
-        process::exit(1);
-    }
-    let mut fd = fd.unwrap();
+    let mut fd = match File::open(&img_path) {
+        Ok(fd) => fd,
+        Err(err) => {
+            println!("Can't open image file \"{}\": {}", img_path, err);
+            process::exit(1);
+        },
+    };
 
     // Read the image's metadata
-    let metadata = nrgrip::metadata::read_nrg_metadata(&mut fd);
-    if metadata.is_err() {
-        println!("Error reading \"{}\": {}",
-                 img_path, metadata.unwrap_err().to_string());
-        process::exit(1);
-    }
-    let metadata = metadata.unwrap();
+    let metadata = match metadata::read_nrg_metadata(&mut fd) {
+        Ok(metadata) => metadata,
+        Err(err) => {
+            println!("Error reading \"{}\": {}", img_path, err);
+            process::exit(1);
+        },
+    };
 
     // Display metadata if requested
     if action_info {
@@ -97,9 +100,8 @@ fn main() {
     // Read and write the cue sheet
     if action_cue {
         println!("\nExtracting cue sheet...");
-        if let Err(err) = nrgrip::cue_sheet::write_cue_sheet(&img_path,
-                                                             &metadata) {
-            println!("Error writing cue sheet: {}", err.to_string());
+        if let Err(err) = cue_sheet::write_cue_sheet(&img_path, &metadata) {
+            println!("Error writing cue sheet: {}", err);
             process::exit(1);
         }
         println!("OK!");
@@ -108,9 +110,9 @@ fn main() {
     // Extract raw audio data
     if action_raw {
         println!("\nExtracting raw audio data...");
-        if let Err(err) = nrgrip::raw_audio::extract_nrg_raw_audio(
-            &mut fd, &img_path, &metadata) {
-            println!("Error extracting raw audio data: {}", err.to_string());
+        if let Err(err) = raw_audio::extract_nrg_raw_audio(&mut fd, &img_path,
+                                                           &metadata) {
+            println!("Error extracting raw audio data: {}", err);
         }
         println!("OK!");
     }
