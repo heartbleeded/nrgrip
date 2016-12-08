@@ -41,8 +41,6 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
                              img_path: &String,
                              metadata: &NrgMetadata)
                              -> Result<(), NrgError> {
-    const BUF_SIZE: usize = 1024 * 1024 * 4; // 4 MiB
-
     // Seek to the first audio byte
     let first_audio_byte = metadata.first_audio_byte();
     try!(in_fd.seek(SeekFrom::Start(first_audio_byte)));
@@ -54,16 +52,37 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
     let audio_name = try!(make_output_file_name(img_path));
     let mut out_fd = try!(File::create(audio_name));
 
+    // Copy the audio data
+    let count = last_audio_byte - first_audio_byte;
+    let bytes_copied = try!(copy_raw_audio(in_fd, &mut out_fd, count));
+
+    assert_eq!(count, bytes_copied);
+    Ok(())
+}
+
+
+/// Reads `count` bytes from `in_fd` and write them to `out_fd`.
+///
+/// The offsets of `in_fd` and `out_fd` are not reset prior to reading and
+/// writing.
+///
+/// Returns the number of bytes copied.
+fn copy_raw_audio(in_fd: &mut File, out_fd: &mut File, count: u64)
+                  -> Result<u64, NrgError> {
+    // The buffer size (~4,6 MiB) is a multiple of the standard audio CD sector
+    // size, i.e. 2352 bytes (it doesn't have to be, though).
+    const BUF_SIZE: usize = 2352 * 1024 * 2;
+
     // Read/write audio data
-    let mut cur_offset = first_audio_byte;
-    while cur_offset + BUF_SIZE as u64 <= last_audio_byte {
+    let mut bytes_read = 0;
+    while bytes_read + BUF_SIZE as u64 <= count {
         let mut audio_buf = [0u8; BUF_SIZE];
 
         let mut nbytes = try!(in_fd.read(&mut audio_buf));
         if nbytes != BUF_SIZE {
             return Err(NrgError::AudioReadError);
         }
-        cur_offset += nbytes as u64;
+        bytes_read += nbytes as u64;
 
         nbytes = try!(out_fd.write(&audio_buf));
         if nbytes != BUF_SIZE {
@@ -72,20 +91,19 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
     }
 
     // Read/write the last bytes
-    let remaining: usize = (last_audio_byte - cur_offset) as usize;
+    let remaining: usize = (count - bytes_read) as usize;
     let mut audio_buf = vec![0u8; remaining];
     let mut nbytes = try!(in_fd.read(&mut audio_buf));
     if nbytes != remaining {
         return Err(NrgError::AudioReadError);
     }
-    cur_offset += nbytes as u64;
+    bytes_read += nbytes as u64;
     nbytes = try!(out_fd.write(&audio_buf));
     if nbytes != remaining {
         return Err(NrgError::AudioWriteError);
     }
 
-    assert_eq!(cur_offset, last_audio_byte);
-    Ok(())
+    Ok(bytes_read)
 }
 
 
