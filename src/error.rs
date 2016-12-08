@@ -32,11 +32,10 @@ use std::io;
 pub enum NrgError {
     Io(io::Error),
     String(ffi::IntoStringError),
-    NrgFormat,
-    NrgFormatV1,
-    NrgChunkId,
+    NrgFormat(String),
+    NrgChunkId(String),
     NoNrgCue,
-    FileName,
+    FileName(String),
     AudioReadError,
     AudioWriteError,
 }
@@ -46,13 +45,15 @@ impl fmt::Display for NrgError {
         match *self {
             NrgError::Io(ref err) => err.fmt(f),
             NrgError::String(ref err) => err.fmt(f),
-            NrgError::NrgFormat => write!(f, "NRG format unknown."),
-            NrgError::NrgFormatV1 => write!(f, "NRG v1 format is not handled."),
-            NrgError::NrgChunkId => write!(f, "NRG chunk ID unknown."),
-            NrgError::NoNrgCue => write!(f, "NRG cue sheet chunk absent."),
-            NrgError::FileName => write!(f, "Invalid file name."),
-            NrgError::AudioReadError => write!(f, "Error reading raw audio."),
-            NrgError::AudioWriteError => write!(f, "Error writing raw audio."),
+            NrgError::NrgFormat(ref err) =>
+                write!(f, "NRG format error: {}", err),
+            NrgError::NrgChunkId(ref err) =>
+                write!(f, "NRG chunk ID unknown: {}", err),
+            NrgError::NoNrgCue => write!(f, "NRG cue sheet chunk absent"),
+            NrgError::FileName(ref err) =>
+                write!(f, "Invalid file name: {}", err),
+            NrgError::AudioReadError => write!(f, "Error reading raw audio"),
+            NrgError::AudioWriteError => write!(f, "Error writing raw audio"),
         }
     }
 }
@@ -62,11 +63,10 @@ impl Error for NrgError {
         match *self {
             NrgError::Io(ref err) => err.description(),
             NrgError::String(ref err) => err.description(),
-            NrgError::NrgFormat => "NRG format",
-            NrgError::NrgFormatV1 => "NRG format v1",
-            NrgError::NrgChunkId => "NRG chunk ID",
+            NrgError::NrgFormat(_) => "NRG format",
+            NrgError::NrgChunkId(_) => "NRG chunk ID",
             NrgError::NoNrgCue => "No NRG cue",
-            NrgError::FileName => "File name",
+            NrgError::FileName(_) => "File name",
             NrgError::AudioReadError => "Audio read error",
             NrgError::AudioWriteError => "Audio write error",
         }
@@ -76,11 +76,10 @@ impl Error for NrgError {
         match *self {
             NrgError::Io(ref err) => Some(err),
             NrgError::String(ref err) => Some(err),
-            NrgError::NrgFormat => None,
-            NrgError::NrgFormatV1 => None,
-            NrgError::NrgChunkId => None,
+            NrgError::NrgFormat(_) => None,
+            NrgError::NrgChunkId(_) => None,
             NrgError::NoNrgCue => None,
-            NrgError::FileName => None,
+            NrgError::FileName(_) => None,
             NrgError::AudioReadError => None,
             NrgError::AudioWriteError => None,
         }

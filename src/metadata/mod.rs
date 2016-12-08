@@ -56,7 +56,8 @@ pub fn read_nrg_metadata(fd: &mut File) -> Result<NrgMetadata, NrgError> {
     nm.nrg_version = try!(read_nrg_version(fd, nm.file_size));
     if nm.nrg_version != 2 {
         // We handle only NRG v2
-        return Err(NrgError::NrgFormatV1);
+        return Err(NrgError::NrgFormat(
+            "NRG v1 format is not handled".to_string()));
     }
 
     // Read the first chunk offset
@@ -78,7 +79,8 @@ pub fn read_nrg_metadata(fd: &mut File) -> Result<NrgMetadata, NrgError> {
 fn read_nrg_version(fd: &mut File, file_size: u64) -> Result<u8, NrgError> {
     if file_size < 12 {
         // Input file too small
-        return Err(NrgError::NrgFormat);
+        return Err(NrgError::NrgFormat(
+            "Input file is to small to be an NRG image".to_string()));
     }
 
     // In NRG v2, the main footer is on the last 12 bytes
@@ -95,7 +97,7 @@ fn read_nrg_version(fd: &mut File, file_size: u64) -> Result<u8, NrgError> {
         return Ok(1); // NRG v1
     }
 
-    Err(NrgError::NrgFormat) // Unknown format
+    Err(NrgError::NrgFormat("Unknown format".to_string()))
 }
 
 
@@ -131,7 +133,7 @@ fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<(), NrgError> 
                 try!(skip_chunk(fd));
                 nm.skipped_chunks.push(chunk_id);
             },
-            _      => { println!("{}", chunk_id); return Err(NrgError::NrgChunkId); }, //fixme
+            _      => return Err(NrgError::NrgChunkId(chunk_id)),
         }
     }
     Ok(())

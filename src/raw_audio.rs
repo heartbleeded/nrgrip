@@ -96,12 +96,13 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
 fn make_output_file_name(img_path: &String) -> Result<String, NrgError> {
     let mut name = PathBuf::from(img_path);
     name.set_extension("raw");
-    let name = PathBuf::from(name);
-    let name = try!(name.file_name().ok_or(NrgError::FileName));
+    let name = try!(name.file_name().ok_or(
+        NrgError::FileName(name.to_string_lossy().into_owned())));
 
     // Make sure the new name and the original name are different
     if name == img_path.as_str() {
-        return Err(NrgError::FileName);
+        return Err(NrgError::FileName("Input and output file are identical"
+                                      .to_string()));
     }
 
     Ok(name.to_string_lossy().into_owned())

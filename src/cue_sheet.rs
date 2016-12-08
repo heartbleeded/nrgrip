@@ -51,14 +51,16 @@ pub fn write_cue_sheet(img_path: &String, metadata: &NrgMetadata)
     let img_name = PathBuf::from(img_path);
     let img_name = match img_name.file_name() {
         Some(name) => name,
-        None => return Err(NrgError::FileName),
+        None => return Err(NrgError::FileName(img_path.clone())),
     };
 
     // Set the cue sheet file's name
     let mut cue_name = PathBuf::from(img_name);
     if cue_name.extension().unwrap_or(OsStr::new("")) == "cue" {
         // img_path's extension was already .cue: problem!
-        return Err(NrgError::FileName);
+        return Err(NrgError::FileName("Input and output file are identical"
+                                      .to_string()));
+
     }
     cue_name.set_extension("cue");
 
