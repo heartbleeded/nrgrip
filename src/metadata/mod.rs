@@ -73,10 +73,13 @@ pub fn read_nrg_metadata(fd: &mut File) -> Result<NrgMetadata, NrgError> {
 
 /// Determines the NRG format of an open NRG image `fd` of file `file_size`.
 ///
+/// `fd`'s offset at call-time doesn't matter, as this function will seek to
+/// read the relevant data.
+///
 /// The offset is left after the main chunk ID, therefore the calling function
 /// can read the first data chunk's offset (32 bits for NRG v1 or 64 bits for
 /// NRG v2) directly without seeking.
-fn read_nrg_version(fd: &mut File, file_size: u64) -> Result<u8, NrgError> {
+pub fn read_nrg_version(fd: &mut File, file_size: u64) -> Result<u8, NrgError> {
     if file_size < 12 {
         // Input file too small
         return Err(NrgError::NrgFormat(
