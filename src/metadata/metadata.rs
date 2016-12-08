@@ -55,6 +55,35 @@ impl NrgMetadata {
             skipped_chunks: Vec::new(),
         }
     }
+
+    /// Returns the index1 of the first DAOX track in `metadata`, or 0 if there
+    /// are no DAOX tracks.
+    pub fn first_audio_byte(&self) -> u64 {
+        if let Some(daox_chunk) = self.daox_chunk.as_ref() {
+            if let Some(first_track) = daox_chunk.tracks.first() {
+                return first_track.index1;
+            }
+        }
+        0
+    }
+
+    /// Returns the number of the byte past the last audio byte in the image
+    /// (i.e. `last audio byte + 1`).
+    ///
+    /// This byte is indicated by the `track_end` of the last DAOX track if at
+    /// least one track is present in the DAOX chunk. If not, `chunk_offset` is
+    /// returned.
+    ///
+    /// Note that the two values should always be identical anyway, but you
+    /// never know.
+    pub fn last_audio_byte(&self) -> u64 {
+        if let Some(daox_chunk) = self.daox_chunk.as_ref() {
+            if let Some(last_track) = daox_chunk.tracks.last() {
+                return last_track.track_end;
+            }
+        }
+        self.chunk_offset
+    }
 }
 
 impl fmt::Display for NrgMetadata {

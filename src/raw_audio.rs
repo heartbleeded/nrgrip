@@ -44,11 +44,11 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
     const BUF_SIZE: usize = 1024 * 1024 * 4; // 4 MiB
 
     // Seek to the first audio byte
-    let first_audio_byte = get_daox_track1_index1(metadata);
+    let first_audio_byte = metadata.first_audio_byte();
     try!(in_fd.seek(SeekFrom::Start(first_audio_byte)));
 
     // Get the last audio byte
-    let last_audio_byte = get_last_audio_byte(metadata);
+    let last_audio_byte = metadata.last_audio_byte();
 
     // Open output file
     let audio_name = try!(make_output_file_name(img_path));
@@ -86,37 +86,6 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
 
     assert_eq!(cur_offset, last_audio_byte);
     Ok(())
-}
-
-
-/// Returns the index1 of the first DAOX track in `metadata`, or 0 if there are
-/// no DAOX tracks.
-fn get_daox_track1_index1(metadata: &NrgMetadata) -> u64 {
-    if metadata.daox_chunk.is_none() {
-        return 0;
-    }
-    let daox_tracks = &metadata.daox_chunk.as_ref().unwrap().tracks;
-    if daox_tracks.is_empty() {
-        return 0;
-    }
-    return daox_tracks[0].index1;
-}
-
-
-/// Returns the number of the byte past the last audio byte in the image.
-///
-/// This byte is indicated by the `track_end` of the last DAOX track in
-/// `metadata`, if at least one track is present in the DAOX chunk.
-/// If not, `metadata.chunk_offset` is returned.
-///
-/// Note that the two values should always be identical, but you never know.
-fn get_last_audio_byte(metadata: &NrgMetadata) -> u64 {
-    if let Some(daox_chunk) = metadata.daox_chunk.as_ref() {
-        if let Some(last_track) = daox_chunk.tracks.last() {
-            return last_track.track_end;
-        }
-    }
-    metadata.chunk_offset
 }
 
 
