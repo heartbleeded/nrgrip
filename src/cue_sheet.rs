@@ -66,7 +66,7 @@ pub fn write_cue_sheet(img_path: &String, metadata: &NrgMetadata)
 
     // Write cue sheet
     let mut fd = try!(File::create(cue_name));
-    try!(writeln!(fd, "FILE \"{}\" RAW", img_name.to_string_lossy()));
+    try!(writeln!(fd, "FILE \"{}\" BINARY", img_name.to_string_lossy()));
     try!(write_cue_tracks(&mut fd, cuex_tracks));
 
     Ok(())
@@ -94,7 +94,8 @@ fn write_cue_track(fd: &mut File, track: &NrgCuexTrack, index0_pos: &mut i32)
         return Ok(());
     }
 
-    // Ignore negative positions
+    // Ignore negative positions. This should happen only for track 1, index 0
+    // and for the lead-in area (which we already skipped).
     if track.position_sectors < 0 {
         return Ok(());
     }
