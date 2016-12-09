@@ -97,3 +97,19 @@ pub fn read_u8(fd: &mut File) -> Result<u8, NrgError> {
     try!(fd.read_exact(&mut buf));
     Ok(buf[0])
 }
+
+
+/// Reads a BCD-encoded byte from `fd`.
+///
+/// If the decoded value is more than 99, which is not a valid binary-coded
+/// decimal value, the byte read is returned as is, without decoding.
+pub fn read_u8_bcd(fd: &mut File) -> Result<u8, NrgError> {
+    let byte = try!(read_u8(fd));
+    let tens = (byte >> 4) * 10;
+    let units = (byte << 4) >> 4;
+    let value = tens + units;
+    if value < 100 {
+        return Ok(value);
+    }
+    Ok(byte)
+}

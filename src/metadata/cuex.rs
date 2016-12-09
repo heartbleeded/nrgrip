@@ -153,8 +153,8 @@ pub fn read_nrg_cuex(fd: &mut File) -> Result<NrgCuex, NrgError> {
 fn read_nrg_cuex_track(fd: &mut File) -> Result<NrgCuexTrack, NrgError> {
     let mut track = NrgCuexTrack::new();
     track.mode = try!(read_u8(fd));
-    track.track_number = try!(read_u8(fd));
-    track.index_number = try!(read_u8(fd));
+    track.track_number = try!(read_u8_bcd(fd));
+    track.index_number = try!(read_u8_bcd(fd));
     track.padding = try!(read_u8(fd));
     track.position_sectors = try!(read_u32(fd)) as i32;
     Ok(track)
