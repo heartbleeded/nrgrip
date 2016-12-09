@@ -1,5 +1,5 @@
-NRGrip - extract audio track and cue sheet from an NRG audio CD image
-=====================================================================
+NRGrip - extract audio data and cue sheet from an NRG audio CD image
+====================================================================
 
 This program works on a Nero Burning ROM's NRG image of an audio CD and is able
 to:
@@ -35,18 +35,26 @@ on your system, then:
 Usage
 -----
 
-At the moment, NRGrip doesn't take any options, you just invoke it with the name
-of an NRG image:
+To see the full usage, run:
 
-    nrgrip image.nrg
+    nrgrip --help
+
+Basically, you can display the metadata and extract the data with:
+
+    nrgrip -ix image.nrg
 
 The cue sheet will be extracted as `image.cue`, and the audio data as
 `image.raw`.
 
-To play the extracted raw audio data, you may use `aplay`, from the ALSA utils
-(you can also do that directly on the NRG file):
+The raw audio data from a CD is 16 bit, little endian, 44100 Hz, stereo. To
+play it, you may use, for instance, `aplay` from the ALSA utils, or `ffplay`
+from `FFmpeg`:
 
     aplay -f cd image.raw
+    ffplay -f s16le -ac 2 image.raw
+
+Note that you can also play the NRG file directly, if the sector size is 2352
+(no sub-channel).
 
 To encode the raw audio data to FLAC (and embed the cue sheet in it):
 
