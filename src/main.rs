@@ -55,8 +55,11 @@ fn main_main() -> i32 {
                  "print this help message");
 
     let options = match opts.parse(&args[1..]) {
-        Ok(m) => m,
-        Err(err) => panic!(err),
+        Ok(options) => options,
+        Err(_) => {
+            print_usage(&prog_name, &opts);
+            return 1;
+        },
     };
 
     if options.opt_present("help") {
