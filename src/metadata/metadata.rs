@@ -131,7 +131,7 @@ impl fmt::Display for NrgMetadata {
                                                {}", chunk)),
         }
         if !self.skipped_chunks.is_empty() {
-            try!(write!(f, "\n\nUnhandled chunks present in this image:"));
+            try!(write!(f, "\n\nUnhandled NRG chunks present in this image:"));
             for chunk_id in &self.skipped_chunks {
                 try!(write!(f, " {}", chunk_id));
             }
