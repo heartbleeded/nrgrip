@@ -64,9 +64,13 @@ pub fn write_cue_sheet(img_path: &str, metadata: &NrgMetadata)
     }
     cue_name.set_extension("cue");
 
+    // Set the raw audio file's name
+    let mut raw_name = cue_name.clone();
+    raw_name.set_extension("raw");
+
     // Write cue sheet
     let mut fd = try!(File::create(cue_name));
-    try!(writeln!(fd, "FILE \"{}\" BINARY", img_name.to_string_lossy()));
+    try!(writeln!(fd, "FILE \"{}\" BINARY", raw_name.to_string_lossy()));
     try!(write_cue_tracks(&mut fd, cuex_tracks));
 
     Ok(())
