@@ -29,7 +29,7 @@ use ::error::NrgError;
 use super::readers::read_u32;
 
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct NrgSinf {
     pub size: u32,
     pub nb_tracks: u32,

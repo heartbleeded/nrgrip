@@ -63,7 +63,7 @@ impl fmt::Display for NrgCuex {
 }
 
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct NrgCuexTrack {
     pub mode: u8,
     pub track_number: u8,

@@ -29,7 +29,7 @@ use ::error::NrgError;
 use super::readers::read_u32;
 
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct NrgMtyp {
     pub size: u32,
     pub unknown: u32,
