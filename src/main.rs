@@ -32,6 +32,22 @@ use nrgrip::metadata;
 use nrgrip::cue_sheet;
 use nrgrip::raw_audio;
 
+const PRETTY_PROGNAME: &'static str = "NRGrip";
+const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
+
+fn print_version() {
+    println!("{} v{}", PRETTY_PROGNAME, VERSION.unwrap_or("X.Y.Z"));
+}
+
+fn print_usage(prog_name: &str, opts: &Options) {
+    let brief = format!("{prettyprog} - rip Nero Burning ROM audio images
+
+Usage:
+    {prog} [-icrx] [options] <image.nrg>
+    {prog} [-h | -V]", prettyprog = PRETTY_PROGNAME, prog = prog_name);
+
+    print!("{}", opts.usage(&brief));
+}
 
 fn main() {
     process::exit(main_main());
@@ -53,6 +69,8 @@ fn main_main() -> i32 {
                  "extract the raw audio tracks");
     opts.optflag("h", "help",
                  "print this help message");
+    opts.optflag("V", "version",
+                 "print program version");
 
     let options = match opts.parse(&args[1..]) {
         Ok(options) => options,
@@ -64,6 +82,11 @@ fn main_main() -> i32 {
 
     if options.opt_present("help") {
         print_usage(&prog_name, &opts);
+        return 0;
+    }
+
+    if options.opt_present("version") {
+        print_version();
         return 0;
     }
 
@@ -128,14 +151,4 @@ fn main_main() -> i32 {
     }
 
     0
-}
-
-
-fn print_usage(prog_name: &str, opts: &Options) {
-    let brief = format!("NRGrip - rip Nero Burning ROM audio images
-
-Usage:
-    {prog} [-icrx] [options] <image.nrg>
-    {prog} -h", prog = prog_name);
-    print!("{}", opts.usage(&brief));
 }
