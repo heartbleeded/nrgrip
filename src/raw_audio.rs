@@ -42,7 +42,8 @@ const RAW96_SEC_SIZE: u16 = 2448;
 /// The output file's name is derived from `img_path`.
 pub fn extract_nrg_raw_audio(in_fd: &mut File,
                              img_path: &str,
-                             metadata: &NrgMetadata)
+                             metadata: &NrgMetadata,
+                             strip_subchannel: bool)
                              -> Result<(), NrgError> {
     // Seek to the first audio byte
     let first_audio_byte = metadata.first_audio_byte();
@@ -54,11 +55,15 @@ pub fn extract_nrg_raw_audio(in_fd: &mut File,
 
     // Copy the audio data
     let count = metadata.last_audio_byte() - first_audio_byte;
-    let bytes_read = match metadata.sector_size() {
-        RAW96_SEC_SIZE => try!(copy_raw96_audio(in_fd, &mut out_fd, count)),
-        0              => return Err(NrgError::AudioReadError),
-        _              => try!(copy_raw_audio(in_fd, &mut out_fd, count)),
-    };
+    if metadata.sector_size() == 0 {
+        return Err(NrgError::AudioReadError);
+    }
+    let bytes_read =
+        if strip_subchannel && metadata.sector_size() == RAW96_SEC_SIZE {
+            try!(copy_raw96_audio(in_fd, &mut out_fd, count))
+        } else {
+            try!(copy_raw_audio(in_fd, &mut out_fd, count))
+        };
 
     assert_eq!(count, bytes_read);
     Ok(())

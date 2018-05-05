@@ -53,7 +53,6 @@ fn main() {
     process::exit(main_main());
 }
 
-
 fn main_main() -> i32 {
     let args: Vec<String> = env::args().collect();
     let prog_name = &args.first().expect("Can't retrieve program's name");
@@ -67,6 +66,8 @@ fn main_main() -> i32 {
                  "extract cue sheet from the NRG metadata");
     opts.optflag("r", "extract-raw",
                  "extract the raw audio tracks");
+    opts.optflag("S", "no-strip-subchannel",
+                 "don't strip the 96-bit subchannel if present");
     opts.optflag("h", "help",
                  "print this help message");
     opts.optflag("V", "version",
@@ -89,6 +90,8 @@ fn main_main() -> i32 {
         print_version();
         return 0;
     }
+
+    let strip_subchannel = !options.opt_present("no-strip-subchannel");
 
     // Get input NRG image name
     if options.free.len() != 1 {
@@ -143,8 +146,9 @@ fn main_main() -> i32 {
     // Extract raw audio data
     if action_raw {
         println!("\nExtracting raw audio data...");
-        if let Err(err) = raw_audio::extract_nrg_raw_audio(&mut fd, &img_path,
-                                                           &metadata) {
+        if let Err(err) =
+            raw_audio::extract_nrg_raw_audio(&mut fd, &img_path,
+                                             &metadata, strip_subchannel) {
             println!("Error extracting raw audio data: {}", err);
         }
         println!("OK!");
