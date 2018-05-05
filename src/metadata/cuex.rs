@@ -1,6 +1,6 @@
 // This file is part of the NRGrip project.
 //
-// Copyright (c) 2016 Matteo Cypriani <mcy@lm7.fr>
+// Copyright (c) 2016, 2018 Matteo Cypriani <mcy@lm7.fr>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
