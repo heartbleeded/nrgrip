@@ -1,50 +1,68 @@
-NRGrip - extract audio data and cue sheet from an NRG audio CD image
-====================================================================
+nrgrip(1) - rip Nero Burning ROM audio NRG images
+=================================================
 
-This program works on a Nero Burning ROM's NRG image of an audio CD and is able
-to:
+SYNOPSIS
+--------
 
-- read and display its metadata;
+`nrgrip` [-icrx] [options] <image.nrg>
 
-- extract the cue sheet;
+`nrgrip` [-h | -V]
 
-- extract the raw audio tracks as one single file, which can then be encoded by
+DESCRIPTION
+-----------
+
+NRGrip works on a Nero Burning ROM's NRG image of an audio CD and is able to:
+
+* read and display its metadata;
+
+* extract the cue sheet;
+
+* extract the raw audio tracks as one single file, which can then be encoded by
   the user to a more convenient audio format such as FLAC, and possibly split
   according to the cue sheet.
 
 For now, only NRG v2 is handled (not NRG v1), and not all of the metadata chunks
 are decoded. If you have interest in adding support for additional chunks or
-formats and have a test image handy, please contact the author or open a
-ticket. In particular, it would be interesting to support ISRC/CD-Text; handling
+formats and have a test image handy, please contact the author or open an
+issue. In particular, it would be interesting to support ISRC/CD-Text; handling
 of multisession and hybrid (audio and data) discs would also be a nice feature.
 
-NRGrip is licensed under the terms of the Expat (MIT) license. See the `COPYING`
-file.
+OPTIONS
+-------
 
+At least one action switch must be provided, along with any number of option
+switches.
 
-Installing
-----------
+### Actions
 
-NRGrip is written in Rust. Make sure [Cargo](http://doc.crates.io/) is installed
-on your system, then:
+* `-i`, `--info`:
+  display the NRG image metadata (default action)
 
-    cargo build --release
-    cargo install
+* `-c`, `--extract-cue`:
+  extract cue sheet from the NRG metadata
 
+* `-r`, `--extract-raw`:
+  extract the raw audio tracks
 
-Usage
------
+* `-x`, `--extract`:
+  same as `-cr`
 
-To see the full usage, run:
+### Additional options
 
-    nrgrip --help
+* `-S`, `--no-strip-subchannel`:
+  don't strip the 96-bit subchannel from the extracted audio data (this option
+  has no effect if the input image has standard 2352-byte sector size)
 
-Basically, you can display the metadata and extract the data with:
+EXAMPLE
+-------
+
+The following command will display the metadata and extract both the cue sheet
+and the audio data:
 
     nrgrip -ix image.nrg
 
 The cue sheet will be extracted as `image.cue`, and the audio data as
-`image.raw`.
+`image.raw` in the current directory.
 
 The raw audio data from a CD is 16 bit, little endian, 44100 Hz, stereo. To
 play it, you may use, for instance, `aplay` from the ALSA utils, or `ffplay`
@@ -70,3 +88,32 @@ To split the FLAC file according to the cue sheet, you may use,
 Or [mp3splt](http://mp3splt.sourceforge.net/):
 
     mp3splt -c image.cue image.flac
+
+INSTALLATION
+------------
+
+NRGrip is written in Rust. Make sure [Cargo](http://doc.crates.io/) is installed
+on your system, then you can install directly from the Git repository with:
+
+    cargo install --git https://code.lm7.fr/mcy/nrgrip.git
+
+Or if you cloned the repository already:
+
+    cargo build --release
+    cargo install
+
+You may also generate the manpage with:
+
+    make
+
+COPYRIGHT
+---------
+
+NRGrip was written by Matteo Cypriani <<mcy@lm7.fr>> and is licensed under the
+terms of the Expat (MIT) license. See the [COPYING](COPYING) file.
+
+SEE ALSO
+--------
+
+Additional information can be found on
+[NRGrip's wiki](https://code.lm7.fr/mcy/nrgrip/wiki).
