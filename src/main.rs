@@ -22,6 +22,7 @@
 
 use std::env;
 use std::fs::File;
+use std::path::PathBuf;
 use std::process;
 
 extern crate getopts;
@@ -55,7 +56,10 @@ fn main() {
 
 fn main_main() -> i32 {
     let args: Vec<String> = env::args().collect();
-    let prog_name = &args.first().expect("Can't retrieve program's name");
+    let prog_fullname = &args.first().expect("Can't retrieve program name");
+    let prog_name = PathBuf::from(prog_fullname).file_name()
+        .expect("Can't retrieve program base name")
+        .to_string_lossy().into_owned();
 
     let mut opts = Options::new();
     opts.optflag("i", "info",
