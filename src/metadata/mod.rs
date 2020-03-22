@@ -32,6 +32,7 @@ pub mod cuex;
 mod daox;
 mod sinf;
 mod mtyp;
+pub mod afnm;
 mod readers;
 
 use self::metadata::NrgMetadata;
@@ -116,7 +117,8 @@ fn read_nrg_chunks(fd: &mut File, nm: &mut NrgMetadata) -> Result<(), NrgError> 
             "DAOX" => nm.daox_chunk = Some(try!(daox::read_nrg_daox(fd))),
             "SINF" => nm.sinf_chunk = Some(try!(sinf::read_nrg_sinf(fd))),
             "MTYP" => nm.mtyp_chunk = Some(try!(mtyp::read_nrg_mtyp(fd))),
-            "CDTX" | "ETN2" | "DINF" | "TOCT" | "RELO" => {
+            "AFNM" => nm.afnm_chunk = Some(try!(afnm::read_nrg_afnm(fd))),
+            "CDTX" | "ETN2" | "DINF" | "TOCT" | "RELO" | "VOLM" => {
                 try!(skip_chunk(fd));
                 nm.skipped_chunks.push(chunk_id);
             },

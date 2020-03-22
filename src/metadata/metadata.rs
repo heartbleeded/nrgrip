@@ -28,6 +28,7 @@ use super::cuex::NrgCuex;
 use super::daox::NrgDaox;
 use super::sinf::NrgSinf;
 use super::mtyp::NrgMtyp;
+use super::afnm::NrgAfnm;
 
 
 #[derive(Debug)]
@@ -39,6 +40,7 @@ pub struct NrgMetadata {
     pub daox_chunk: Option<NrgDaox>,
     pub sinf_chunk: Option<NrgSinf>,
     pub mtyp_chunk: Option<NrgMtyp>,
+    pub afnm_chunk: Option<NrgAfnm>,
     pub skipped_chunks: Vec<String>,
 }
 
@@ -52,6 +54,7 @@ impl NrgMetadata {
             daox_chunk: None,
             sinf_chunk: None,
             mtyp_chunk: None,
+            afnm_chunk: None,
             skipped_chunks: Vec::new(),
         }
     }
@@ -126,6 +129,11 @@ impl fmt::Display for NrgMetadata {
                                                {}", chunk)),
         }
         match self.mtyp_chunk {
+            None => {},
+            Some(ref chunk) => try!(write!(f, "\n\n\
+                                               {}", chunk)),
+        }
+        match self.afnm_chunk {
             None => {},
             Some(ref chunk) => try!(write!(f, "\n\n\
                                                {}", chunk)),

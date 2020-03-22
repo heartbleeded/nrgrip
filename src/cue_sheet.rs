@@ -30,6 +30,7 @@ use std::path::PathBuf;
 use ::error::NrgError;
 use ::metadata::metadata::NrgMetadata;
 use ::metadata::cuex::NrgCuexTrack;
+use ::metadata::afnm::NrgAfnmTrack;
 
 
 /// Writes the cue sheet for `img_path` into a file.
@@ -46,7 +47,10 @@ pub fn write_cue_sheet(img_path: &str, metadata: &NrgMetadata)
         None => return Err(NrgError::NoNrgCue),
         Some(ref chunk) => &chunk.tracks,
     };
-
+     let cuex_titles = match metadata.afnm_chunk {
+        None => return Err(NrgError::NoNrgCue),
+        Some(ref chunk) => &chunk.tracks,
+    };
     // Get the image's base name
     let img_name = PathBuf::from(img_path);
     let img_name = match img_name.file_name() {
@@ -71,18 +75,18 @@ pub fn write_cue_sheet(img_path: &str, metadata: &NrgMetadata)
     // Write cue sheet
     let mut fd = try!(File::create(cue_name));
     try!(writeln!(fd, "FILE \"{}\" BINARY", raw_name.to_string_lossy()));
-    try!(write_cue_tracks(&mut fd, cuex_tracks));
+    try!(write_cue_tracks(&mut fd, cuex_tracks, cuex_titles));
 
     Ok(())
 }
 
 
 /// Writes a list of cue tracks to `fd`.
-fn write_cue_tracks(fd: &mut File, cuex_tracks: &Vec<NrgCuexTrack>)
+fn write_cue_tracks(fd: &mut File, cuex_tracks: &Vec<NrgCuexTrack>, afnm_tracks: &Vec<NrgAfnmTrack>)
                    -> Result<(), NrgError> {
     let mut index0_pos = -1; // position of the last index #0 encountered
     for track in cuex_tracks {
-        try!(write_cue_track(fd, track, &mut index0_pos));
+        try!(write_cue_track(fd, track, &mut index0_pos, afnm_tracks));
     }
     Ok(())
 }
@@ -91,7 +95,7 @@ fn write_cue_tracks(fd: &mut File, cuex_tracks: &Vec<NrgCuexTrack>)
 /// Writes a cue track's info to `fd`.
 ///
 /// `index0_pos` should be negative when this function is first called.
-fn write_cue_track(fd: &mut File, track: &NrgCuexTrack, index0_pos: &mut i32)
+fn write_cue_track(fd: &mut File, track: &NrgCuexTrack, index0_pos: &mut i32, afnm_tracks: &Vec<NrgAfnmTrack>)
                    -> Result<(), NrgError> {
     // Ignore lead-in and lead-out areas
     if track.track_number == 0 || track.track_number == 0xAA {
@@ -112,7 +116,8 @@ fn write_cue_track(fd: &mut File, track: &NrgCuexTrack, index0_pos: &mut i32)
 
     // Write track info
     try!(writeln!(fd, "  TRACK {:02} AUDIO", track.track_number));
-
+    try!(writeln!(fd, "    TITLE {:?}", afnm_tracks[ (track.track_number -1) as usize].name.replace(".wav", "")));
+    
     // Write index0 if we stored it and it's before the current index's
     // position (i.e., it indicates a pre-gap)
     if *index0_pos >= 0 && *index0_pos < track.position_sectors {
